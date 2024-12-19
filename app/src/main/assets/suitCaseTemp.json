@@ -1,0 +1,253 @@
+{
+  "msg": "suite",
+  "cases": [
+    {
+      "steps": [
+        {
+          "step": {
+            "id": 3,
+            "parentId": 0,
+            "projectId": 1,
+            "caseId": 2,
+            "platform": 1,
+            "stepType": "appReset",
+            "content": "",
+            "text": "com.android.chrome",
+            "sort": 1,
+            "error": 3,
+            "conditionType": 0,
+            "disabled": 0,
+            "elements": []
+          }
+        },
+        {
+          "step": {
+            "id": 13,
+            "parentId": 0,
+            "projectId": 1,
+            "caseId": 2,
+            "platform": 1,
+            "stepType": "stepHold",
+            "content": "1000",
+            "text": "",
+            "sort": 2,
+            "error": 3,
+            "conditionType": 0,
+            "disabled": 0,
+            "elements": []
+          }
+        },
+        {
+          "step": {
+            "id": 1,
+            "parentId": 0,
+            "projectId": 1,
+            "caseId": 2,
+            "platform": 1,
+            "stepType": "keyCode",
+            "content": "HOME",
+            "text": "",
+            "sort": 3,
+            "error": 3,
+            "conditionType": 0,
+            "disabled": 0,
+            "elements": []
+          }
+        },
+        {
+          "step": {
+            "id": 14,
+            "parentId": 0,
+            "projectId": 1,
+            "caseId": 2,
+            "platform": 1,
+            "stepType": "stepHold",
+            "content": "1000",
+            "text": "",
+            "sort": 4,
+            "error": 3,
+            "conditionType": 0,
+            "disabled": 0,
+            "elements": []
+          }
+        },
+        {
+          "step": {
+            "id": 2,
+            "parentId": 0,
+            "projectId": 1,
+            "caseId": 2,
+            "platform": 1,
+            "stepType": "click",
+            "content": "",
+            "text": "",
+            "sort": 5,
+            "error": 3,
+            "conditionType": 0,
+            "disabled": 0,
+            "elements": [
+              {
+                "id": 1,
+                "eleName": "chome桌面图标text",
+                "eleType": "accessibilityId",
+                "eleValue": "Chrome",
+                "projectId": 1,
+                "moduleId": 0
+              }
+            ]
+          }
+        },
+        {
+          "step": {
+            "id": 15,
+            "parentId": 0,
+            "projectId": 1,
+            "caseId": 2,
+            "platform": 1,
+            "stepType": "stepHold",
+            "content": "2000",
+            "text": "",
+            "sort": 6,
+            "error": 3,
+            "conditionType": 0,
+            "disabled": 0,
+            "elements": []
+          }
+        },
+        {
+          "step": {
+          "caseId": 2,
+          "conditionType": 0,
+          "content": "",
+          "disabled": 0,
+          "elements": [
+            {
+              "eleName": "Accept & continue",
+              "eleType": "id",
+              "eleValue": "com.android.chrome:id/terms_accept",
+              "id": 2,
+              "moduleId": 0,
+              "projectId": 1
+            }
+          ],
+          "error": 3,
+          "id": 5,
+          "parentId": 4,
+          "platform": 1,
+          "projectId": 1,
+          "sort": 8,
+          "stepType": "click",
+          "text": ""
+        }
+        },
+        {"step": {
+          "caseId": 2,
+          "conditionType": 0,
+          "content": "1000",
+          "disabled": 0,
+          "elements": [],
+          "error": 3,
+          "id": 16,
+          "parentId": 4,
+          "platform": 1,
+          "projectId": 1,
+          "sort": 18,
+          "stepType": "stepHold",
+          "text": ""
+        }},
+        {"step": {
+          "caseId": 2,
+          "conditionType": 0,
+          "content": "",
+          "disabled": 0,
+          "elements": [
+            {
+              "eleName": "No thanks",
+              "eleType": "id",
+              "eleValue": "com.android.chrome:id/negative_button",
+              "id": 3,
+              "moduleId": 0,
+              "projectId": 1
+            }
+          ],
+          "error": 3,
+          "id": 7,
+          "parentId": 6,
+          "platform": 1,
+          "projectId": 1,
+          "sort": 10,
+          "stepType": "click",
+          "text": ""
+        }},
+        {"step": {
+          "caseId": 2,
+          "conditionType": 0,
+          "content": "",
+          "disabled": 0,
+          "elements": [
+            {
+              "eleName": "No thanks",
+              "eleType": "id",
+              "eleValue": "com.android.chrome:id/negative_button",
+              "id": 4,
+              "moduleId": 0,
+              "projectId": 1
+            }
+          ],
+          "error": 3,
+          "id": 9,
+          "parentId": 8,
+          "platform": 1,
+          "projectId": 1,
+          "sort": 12,
+          "stepType": "click",
+          "text": ""
+        }},
+        {
+          "step": {
+            "id": 12,
+            "parentId": 0,
+            "projectId": 1,
+            "caseId": 2,
+            "platform": 1,
+            "stepType": "stepHold",
+            "content": "2000",
+            "text": "",
+            "sort": 14,
+            "error": 3,
+            "conditionType": 0,
+            "disabled": 0,
+            "elements": []
+          }
+        }
+      ],
+      "device": [
+        {
+          "id": 6,
+          "agentId": 1,
+          "cpu": "armeabi-v7a",
+          "imgUrl": "",
+          "manufacturer": "INFINIX",
+          "model": "Infinix X6526",
+          "name": "X6526-OP",
+          "password": "",
+          "platform": 1,
+          "isHm": 0,
+          "size": "720x1612",
+          "status": "ONLINE",
+          "udId": "V658X65260123456",
+          "version": "13",
+          "nickName": "",
+          "user": "",
+          "chiName": "",
+          "temperature": 283,
+          "voltage": 4417,
+          "level": 100,
+          "position": 0
+        }
+      ],
+      "cid": 2
+    }
+  ],
+  "pf": 1
+}
