@@ -16,6 +16,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
+import android.graphics.Point;
 import android.graphics.SurfaceTexture;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
@@ -35,15 +36,22 @@ import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.View;
 import android.view.WindowManager;
+import android.view.accessibility.AccessibilityNodeInfo;
 
+import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.autotest.sonicclient.application.ApplicationImpl;
+import com.autotest.sonicclient.model.By;
 import com.autotest.sonicclient.services.TService;
+import com.autotest.sonicclient.utils.DeviceUtil;
 import com.autotest.sonicclient.utils.InstrumentImpl;
 import com.autotest.sonicclient.utils.PermissionHelper;
 import com.autotest.sonicclient.utils.JsonParser;
 import com.autotest.sonicclient.utils.ShellUtil;
 import com.autotest.sonicclient.utils.ToastUtil;
+import com.autotest.sonicclient.utils.XMLUtil;
+
+import org.w3c.dom.Node;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -94,36 +102,23 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void onButtonClick(View view) throws Exception {
-//        while (!TService.isReady()) {
-//            SystemClock.sleep(50);
-//        }
         switch (view.getId()) {
             case R.id.bt1:
-                @SuppressLint("MissingPermission") String serial = Build.getSerial();
-                ToastUtil.showToast(serial);
+//                @SuppressLint("MissingPermission") String serial = Build.getSerial();
+//                ToastUtil.showToast(serial);
 
-                ShellUtil.execCmd("screencap -p /sdcard/shot.png");
+//                ShellUtil.execCmd("screencap -p /sdcard/shot.png");
 
-//                TService.getInstance().clickText("Hello World!");
-//                TService.getInstance().clickID("com.autotest.sonicclient:id/bt2");
-//                TService.getInstance().clickDesc("Button2");
+                Log.i(TAG, "onButtonClick: ---------");
+                Point screenSize = DeviceUtil.getScreenSize();
+                Log.i(TAG, "onButtonClick: size: " + screenSize);
 
-//                try {
-//                    Log.d(TAG, "onButtonClick: -----------------");
-//                    TService.getInstance().clickPos(550, 550);
-////                    ShellUtil.execCmd(String.format("input tap %s %s", 550, 550), 100);
-//                } catch (Exception e) {
-//                    e.printStackTrace();
-//                }
-//                ShellUtil.execCmd("settings put system pointer_location 1");
-//                ShellUtil.execCmd("input swipe 100 100 200 200 40");
-//                public void sendHomeKey() {
-
-//            }
                 break;
             case R.id.bt2:
                 ApplicationImpl.getInstance().showToast("click on bt2");
                 ApplicationImpl.getInstance().scanClasses();
         }
     }
+
+
 }

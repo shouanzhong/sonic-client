@@ -15,4 +15,15 @@ public class Constant {
     public static final String KEY_SONIC_TOKEN = "SonicToken";
     public static final String KEY_REMEMBER_ME = "remember_me";
     public static final String KEY_PROJECT_ID = "KEY_PROJECT_ID";
+
+    public static final String KEY_SUIT_INFO_SID = "sid";
+    public static final String KEY_SUIT_INFO_CASES = "cases";
+
+    public static final String KEY_CASE_INFO_CID = "cid";
+    public static final String KEY_CASE_INFO_RID = "rid";
+    public static final String KEY_CASE_INFO_STEPS = "steps";
+    public static final String KEY_CASE_INFO_LOG_URI = "logUri";
+
+    public static final String KEY_STEP_INFO_STEP = "step";
+    public static final String KEY_STEP_INFO_TYPE = "stepType";
 }

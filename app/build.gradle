@@ -59,4 +59,5 @@ dependencies {
     implementation ('com.orhanobut:logger:2.2.0') {
         exclude group: "com.android.support"
     }
+    implementation("io.minio:minio:8.5.14")
 }

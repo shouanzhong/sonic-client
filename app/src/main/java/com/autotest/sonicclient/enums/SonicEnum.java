@@ -20,10 +20,6 @@ package com.autotest.sonicclient.enums;
 
 import java.util.stream.Stream;
 
-/**
- * @author JayWenStar
- * @date 2022/3/13 1:55 下午
- */
 public interface SonicEnum<T> {
 
     /**

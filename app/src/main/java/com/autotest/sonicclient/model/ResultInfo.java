@@ -3,10 +3,15 @@ package com.autotest.sonicclient.model;
 
 import android.os.Build;
 
+import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.autotest.sonicclient.application.ApplicationImpl;
 import com.autotest.sonicclient.enums.StepType;
-import com.autotest.sonicclient.utils.CommonUtil;
+import com.autotest.sonicclient.utils.DeviceUtil;
 
+/**
+ * Step result info
+ */
 public class ResultInfo {
     private String stepDes;
     private String detail;
@@ -15,6 +20,9 @@ public class ResultInfo {
     private int resultId;
     private String pic;
     private JSONObject packInfo;
+    private final JSONArray stepResultList = new JSONArray();
+    private String logPath;
+    private final String minioBucket = ApplicationImpl.getInstance().getPackageName();
 
     public String getStepDes() {
         return stepDes;
@@ -60,6 +68,10 @@ public class ResultInfo {
         return packInfo;
     }
 
+    public JSONArray getStepResultList() {
+        return stepResultList;
+    }
+
     public void reset() {
         clearStep();
         this.caseId = -1;
@@ -74,6 +86,10 @@ public class ResultInfo {
         this.pic = "";
     }
 
+    public void collect() {
+        stepResultList.add(packInfo);
+    }
+
     public JSONObject pack(int status, String des, String detail) {
         packInfo = new JSONObject();
         packInfo.put("msg", "step");
@@ -84,6 +100,7 @@ public class ResultInfo {
         packInfo.put("rid", resultId);
         packInfo.put("udId", Build.getSerial());
         packInfo.put("pic", pic);
+        packInfo.put("logcatPath", logPath);
         return packInfo;
     }
 
@@ -104,12 +121,12 @@ public class ResultInfo {
     }
 
     public JSONObject packWarning() {
-        this.pic = CommonUtil.takeShot(caseId + "");
+        this.pic = DeviceUtil.takeShot(caseId + "");
         return pack(StepType.WARN, stepDes + "异常！");
     }
 
     public JSONObject packError() {
-        this.pic = CommonUtil.takeShot(caseId + "");
+        this.pic = DeviceUtil.takeShot(caseId + "");
         return pack(StepType.ERROR, stepDes + "异常！", detail);
     }
 

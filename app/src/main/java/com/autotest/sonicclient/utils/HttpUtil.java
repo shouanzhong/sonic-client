@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 
 import okhttp3.Call;
 import okhttp3.Headers;
+import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -112,6 +113,12 @@ public class HttpUtil {
         client.newCall(request).enqueue(callback);
     }
 
+    public static void post(String url, String jsonString, okhttp3.Callback callback) {
+        MediaType type = MediaType.parse("application/json; charset=utf-8");
+        RequestBody body = RequestBody.create(type, jsonString);
+        post(url, body, callback);
+    }
+
     /**
      * 同步post
      * @param url
@@ -138,7 +145,6 @@ public class HttpUtil {
 
     public static abstract class Callback<T> implements okhttp3.Callback {
 
-
         @Override
         public void onResponse(Call call, Response response) throws IOException {
             String bodyString = null;
@@ -147,7 +153,6 @@ public class HttpUtil {
                 return;
             }
             LogUtil.d(TAG, String.format("onResponse: %s", bodyString));
-            Log.d(TAG, String.format("onResponse: %s", bodyString));
 
             JSONObject jsonObject = JSONObject.parse(bodyString);
             T data = (T) jsonObject.get("data");
@@ -159,8 +164,6 @@ public class HttpUtil {
         @Override
         public void onFailure(@NonNull Call call, @NonNull IOException e) {
             LogUtil.e(TAG, "request error ", e);
-            LogUtil.d(TAG, "onResponse: ");
-
 //            ToastUtil.showToast("request fail !");
 //            SharePreferenceUtil.getInstance(ApplicationImpl.getInstance()).clear(Constant.KEY_SONIC_TOKEN);
 //            GConfig.SONIC_TOKEN = "";

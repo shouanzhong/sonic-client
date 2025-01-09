@@ -20,7 +20,7 @@ public class ShellUtil {
     public static String execCmd(String cmd, int timeout) {
         final StringBuilder sb = new StringBuilder();
         final StringBuilder err = new StringBuilder();
-        execCmd(cmd, timeout, new OnStreamChangedListener() {
+        execCmd(cmd, new OnStreamChangedListener() {
             @Override
             public void onStreamChanged(String line) {
                 Log.d(TAG, "onStreamChanged: " + line);
@@ -34,13 +34,13 @@ public class ShellUtil {
                 err.append(line);
                 err.append("\n");
             }
-        });
+        }, timeout);
         stopCmd();
         return sb.append(err).toString();
     }
 
-    public static void execCmd(String cmd, int timeout, OnStreamChangedListener listener) {
-        Log.d(TAG, "execCmd: " + cmd);
+    public static void execCmd(String cmd, OnStreamChangedListener listener, int timeout) {
+        LogUtil.d(TAG, "execCmd: " + cmd);
         myThread = new MyThread.Builder().setCmd(cmd).setTimeout(timeout).setTerminator(TERMINATOR).setListener(listener).create();
         myThread.setDaemon(true);
         myThread.start();
@@ -105,8 +105,7 @@ public class ShellUtil {
                     }
                 }
             } catch (IOException e) {
-                System.out.println(String.format("IOException raise when execute command [%s]", this.cmd));
-                e.printStackTrace();
+                Log.e(TAG, String.format("execCmd: IOException raise when execute command [%s]", this.cmd), e);
             }
             finally {
                 if (process != null && process.isAlive()) {

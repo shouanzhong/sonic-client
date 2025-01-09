@@ -1,63 +1,76 @@
 package com.autotest.sonicclient.handler;
 
 import android.content.Context;
+import android.content.pm.PackageManager;
+import android.graphics.Point;
 import android.os.SystemClock;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.accessibility.AccessibilityNodeInfo;
 
+import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.autotest.sonicclient.enums.AndroidKey;
 import com.autotest.sonicclient.enums.ConditionEnum;
 import com.autotest.sonicclient.enums.ErrorType;
 import com.autotest.sonicclient.enums.SonicEnum;
 import com.autotest.sonicclient.enums.StepType;
+import com.autotest.sonicclient.model.By;
 import com.autotest.sonicclient.model.ResultInfo;
 import com.autotest.sonicclient.services.TService;
+import com.autotest.sonicclient.utils.Constant;
+import com.autotest.sonicclient.utils.DeviceUtil;
 import com.autotest.sonicclient.utils.GConfigParams;
 import com.autotest.sonicclient.utils.InstrumentImpl;
 import com.autotest.sonicclient.utils.JsonParser;
 import com.autotest.sonicclient.utils.LogUtil;
+import com.autotest.sonicclient.utils.PermissionHelper;
 import com.autotest.sonicclient.utils.ShellUtil;
 import com.autotest.sonicclient.utils.ToastUtil;
 
+import java.lang.ref.WeakReference;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.Future;
 
 public class StepHandler {
     private static final String TAG = "StepHandler";
     Context handleContext;
-    private JSONObject globalParams = new JSONObject();
+    WeakReference<Context> contextWeakReference;
+    private final JSONObject globalParams = new JSONObject();
 
-    private ResultInfo resultInfo = new ResultInfo();
+    private final ResultInfo resultInfo = new ResultInfo();
 
 
-    public StepHandler(Context handleContext) {
-        this.handleContext = handleContext;
+    public StepHandler(Context context) {
+        contextWeakReference = new WeakReference<>(context);
     }
 
     public ResultInfo getResultInfo() {
         return resultInfo;
     }
 
-    public ResultInfo runStep(JSONObject stepJSON) throws Throwable {
+    public void runStep(JSONObject stepJSON) throws Throwable {
         resultInfo.clearStep();
-        String stepType = stepJSON.getJSONObject("step").getString("stepType");
+        String stepType = stepJSON.getJSONObject(Constant.KEY_STEP_INFO_STEP).getString(Constant.KEY_STEP_INFO_TYPE);
         try {
             handleStep(stepJSON);
         } catch (Exception e) {
             LogUtil.e(TAG, String.format("runStep: [%s] 执行失败", stepType), e);
             resultInfo.setE(e);
             resultInfo.setStepDes(stepType + "handle error!!");
+            resultInfo.packError();
+        } finally {
+            resultInfo.collect();
         }
-        return resultInfo;
-    }
-
-    private void handleResult() {
-
     }
 
     private void handleStep(JSONObject stepJSON) throws Throwable {
         LogUtil.d(TAG, "handleStep: step: " + stepJSON);
-        JSONObject step = stepJSON.getJSONObject("step");
+        JSONObject step = stepJSON.getJSONObject(Constant.KEY_STEP_INFO_STEP);
         // 兼容childSteps
         if (JsonParser.isJSONObjectEmpty(step)) {
             step = stepJSON;
@@ -81,7 +94,7 @@ public class StepHandler {
             }
         }
 
-        switch (step.getString("stepType")) {
+        switch (step.getString(Constant.KEY_STEP_INFO_TYPE)) {
             case "switchTouchMode":
                 switchTouchMode(step.getString("content"));
                 break;
@@ -104,15 +117,13 @@ public class StepHandler {
                 readText(step.getString("content"), step.getString("text"));
                 break;
             case "clickByImg":
-                clickByImg(eleName
-                        , eleValue);
+                clickByImg(eleName, eleValue);  // 未实现
                 break;
             case "click":
-                click(eleName, eleType
-                        , eleValue);
+                click(eleName, eleType, eleValue);
                 break;
             case "getTitle":
-                getTitle(step.getString("content"));
+                getTitle(step.getString("content"));  // 未实现
                 break;
             case "getUrl":
                 getUrl(step.getString("content"));
@@ -121,83 +132,58 @@ public class StepHandler {
                 getActivity(step.getString("content"));
                 break;
             case "getElementAttr":
-                getElementAttr(eleName, eleType
-                        , eleValue, step.getString("text"), step.getString("content"));
+                getElementAttr(eleName, eleType, eleValue, step.getString("text"), step.getString("content"));
                 break;
             case "obtainElementAttr":
-                obtainElementAttr(eleName,
-                        eleType, eleValue,
-                        step.getString("text"), step.getString("content"));
+                obtainElementAttr(eleName, eleType, eleValue, step.getString("text"), step.getString("content"));
                 break;
             case "logElementAttr":
-                logElementAttr(eleName, eleType
-                        , eleValue, step.getString("text"));
+                logElementAttr(eleName, eleType, eleValue, step.getString("text"));
                 break;
             case "sendKeys":
-                sendKeys(eleName, eleType
-                        , eleValue, step.getString("content"));
+                sendKeys(eleName, eleType, eleValue, step.getString("content"));
                 break;
             case "sendKeysByActions":
-                sendKeysByActions(eleName, eleType
-                        , eleValue, step.getString("content"));
+                sendKeysByActions(eleName, eleType, eleValue, step.getString("content"));
                 break;
             case "isExistEle":
-                isExistEle(eleName, eleType
-                        , eleValue, step.getBoolean("content"));
+                isExistEle(eleName, eleType, eleValue, step.getBoolean("content"));
                 break;
             case "scrollToEle":
-                scrollToEle(eleName,
-                        eleType,
-                        eleValue,
-                        step.getInteger("content"),
-                        step.getString("text"));
+                scrollToEle(eleName, eleType, eleValue, step.getInteger("content"), step.getString("text"));
                 break;
             case "isExistEleNum":
-                isExistEleNum(eleName,
-                        eleType,
-                        eleValue,
-                        step.getString("content"),
-                        step.getInteger("text"), -1);
+                isExistEleNum(eleName, eleType, eleValue, step.getString("content"), step.getInteger("text"), -1);
                 break;
             case "clear":
-                clear(eleName, eleType
-                        , eleValue);
+                clear(eleName, eleType, eleValue);
                 break;
             case "longPress":
-                longPress(eleName, eleType
-                        , eleValue, step.getInteger("content"));
+                longPress(eleName, eleType, eleValue, step.getInteger("content"));
                 break;
             case "swipe":
-                swipePoint(eleName, eleValue
-                        , eleName1, eleValue1);
+                swipePoint(eleName, eleValue, eleName1, eleValue1);
                 break;
             case "swipe2":
-                swipe(eleName, eleType, eleValue
-                        , eleName1, eleType1, eleValue1);
+                swipe(eleName, eleType, eleValue, eleName1, eleType1, eleValue1);
                 break;
             case "drag":
-                dragByPoint(eleName, eleValue
-                        , eleName1, eleValue1);
+                dragByPoint(eleName, eleValue, eleName1, eleValue1);
                 break;
             case "drag2":
-                dragByEle(eleName, eleType, eleValue
-                        , eleName1, eleType1, eleValue1);
+                dragByEle(eleName, eleType, eleValue, eleName1, eleType1, eleValue1);
                 break;
             case "motionEvent":
-                motionEventByEle(eleName,
-                        eleType, eleValue, step.getString("text"));
+                motionEventByEle(eleName, eleType, eleValue, step.getString("text"));
                 break;
             case "motionEventByPoint":
-                motionEventByPoint(eleName,
-                        eleValue,
-                        step.getString("text"));
+                motionEventByPoint(eleName, eleValue, step.getString("text"));
                 break;
             case "tap":
                 tap(eleName, eleValue);
                 break;
             case "longPressPoint":
-                longPressPoint(eleName, eleValue
-                        , step.getInteger("content"));
+                longPressPoint(eleName, eleValue, step.getInteger("content"));
                 break;
             case "pause":
                 pause(step.getInteger("content"));
@@ -206,8 +192,7 @@ public class StepHandler {
                 swipeByDefinedDirection(step.getString("text"), step.getInteger("content"));
                 break;
             case "checkImage":
-                checkImage(eleName, eleValue
-                        , step.getDouble("content"));
+                checkImage(eleName, eleValue, step.getDouble("content"));
                 break;
             case "stepScreen":
                 stepScreen(handleContext);
@@ -227,7 +212,7 @@ public class StepHandler {
             case "screenSub":
             case "screenAdd":
             case "screenAbort":
-                rotateDevice(step.getString("stepType"));
+                rotateDevice(step.getString(Constant.KEY_STEP_INFO_TYPE));
                 break;
             case "lock":
                 lock(handleContext);
@@ -256,11 +241,10 @@ public class StepHandler {
             case "assertNotTrue":
                 String actual = TextHandler.replaceTrans(step.getString("text"), globalParams);
                 String expect = TextHandler.replaceTrans(step.getString("content"), globalParams);
-                asserts(actual, expect, step.getString("stepType"));
+                asserts(actual, expect, step.getString(Constant.KEY_STEP_INFO_TYPE));
                 break;
             case "getTextValue":
-                globalParams.put(step.getString("content"), getText(eleName
-                        , eleType, eleValue));
+                globalParams.put(step.getString("content"), getText(eleName, eleType, eleValue));
                 break;
             case "sendKeyForce":
                 sendKeyForce(step.getString("content"));
@@ -275,31 +259,22 @@ public class StepHandler {
                 setDefaultFindWebViewElementInterval(step.getInteger("content"), step.getInteger("text"));
                 break;
             case "webElementScrollToView":
-                webElementScrollToView(eleName,
-                        eleType,
-                        eleValue);
+                webElementScrollToView(eleName, eleType, eleValue);
                 break;
             case "isExistWebViewEle":
-                isExistWebViewEle(eleName, eleType
-                        , eleValue, step.getBoolean("content"));
+                isExistWebViewEle(eleName, eleType, eleValue, step.getBoolean("content"));
                 break;
             case "isExistWebViewEleNum":
-                isExistEleNum(
-                        eleName, eleType
-                        , eleValue, step.getString("content"),
-                        step.getInteger("text"), -1);
+                isExistEleNum(eleName, eleType, eleValue, step.getString("content"), step.getInteger("text"), -1);
                 break;
             case "webViewClear":
-                webViewClear(eleName, eleType
-                        , eleValue);
+                webViewClear(eleName, eleType, eleValue);
                 break;
             case "webViewSendKeys":
-                webViewSendKeys(eleName, eleType
-                        , eleValue, step.getString("content"));
+                webViewSendKeys(eleName, eleType, eleValue, step.getString("content"));
                 break;
             case "webViewSendKeysByActions":
-                webViewSendKeysByActions(eleName, eleType
-                        , eleValue, step.getString("content"));
+                webViewSendKeysByActions(eleName, eleType, eleValue, step.getString("content"));
                 break;
             case "webViewClick":
                 webViewClick(eleName, eleType, eleValue);
@@ -311,8 +286,7 @@ public class StepHandler {
                 webViewBack(handleContext);
                 break;
             case "getWebViewTextValue":
-                globalParams.put(step.getString("content"), getWebViewText(eleName
-                        , eleType, eleValue));
+                globalParams.put(step.getString("content"), getWebViewText(eleName, eleType, eleValue));
                 break;
             case "findElementInterval":
                 setFindElementInterval(step.getInteger("content"), step.getInteger("text"));
@@ -327,47 +301,34 @@ public class StepHandler {
                 startPocoDriver(step.getString("content"), step.getInteger("text"));
                 break;
             case "isExistPocoEle":
-                isExistPocoEle(eleName, eleType
-                        , eleValue, step.getBoolean("content"));
+                isExistPocoEle(eleName, eleType, eleValue, step.getBoolean("content"));
                 break;
             case "isExistPocoEleNum":
-                isExistEleNum(
-                        eleName, eleType
-                        , eleValue, step.getString("content"),
-                        step.getInteger("text"), -1);
+                isExistEleNum(eleName, eleType, eleValue, step.getString("content"), step.getInteger("text"), -1);
                 break;
             case "pocoClick":
-                pocoClick(eleName, eleType
-                        , eleValue);
+                pocoClick(eleName, eleType, eleValue);
                 break;
             case "pocoLongPress":
-                pocoLongPress(eleName, eleType
-                        , eleValue
-                        , step.getInteger("content"));
+                pocoLongPress(eleName, eleType, eleValue, step.getInteger("content"));
                 break;
             case "pocoSwipe":
-                pocoSwipe(eleName, eleType, eleValue
-                        , eleName1, eleType1, eleValue1);
+                pocoSwipe(eleName, eleType, eleValue, eleName1, eleType1, eleValue1);
                 break;
             case "setTheRealPositionOfTheWindow":
                 setTheRealPositionOfTheWindow(step.getString("content"));
                 break;
             case "getPocoElementAttr":
-                getPocoElementAttr(eleName, eleType
-                        , eleValue, step.getString("text"), step.getString("content"));
+                getPocoElementAttr(eleName, eleType, eleValue, step.getString("text"), step.getString("content"));
                 break;
             case "obtainPocoElementAttr":
-                obtainPocoElementAttr(eleName,
-                        eleType, eleValue,
-                        step.getString("text"), step.getString("content"));
+                obtainPocoElementAttr(eleName, eleType, eleValue, step.getString("text"), step.getString("content"));
                 break;
             case "logPocoElementAttr":
-                logPocoElementAttr(eleName, eleType
-                        , eleValue, step.getString("text"));
+                logPocoElementAttr(eleName, eleType, eleValue, step.getString("text"));
                 break;
             case "getPocoTextValue":
-                globalParams.put(step.getString("content"), getPocoText(eleName
-                        , eleType, eleValue));
+                globalParams.put(step.getString("content"), getPocoText(eleName, eleType, eleValue));
                 break;
             case "freezeSource":
                 freezeSource(handleContext);
@@ -391,12 +352,10 @@ public class StepHandler {
                 closeKeyboard(handleContext);
                 break;
             case "iteratorPocoElement":
-                iteratorPocoElement(eleName, eleType
-                        , eleValue);
+                iteratorPocoElement(eleName, eleType, eleValue);
                 break;
             case "iteratorAndroidElement":
-                iteratorAndroidElement(eleName, eleType
-                        , eleValue);
+                iteratorAndroidElement(eleName, eleType, eleValue);
                 break;
             case "getClipperByKeyboard":
                 globalParams.put(step.getString("content"), getClipperByKeyboard(handleContext));
@@ -406,41 +365,23 @@ public class StepHandler {
                 break;
             // <= 2.5版本的文本断言语法(包括原生，webView，Poco三类)，保留做兼容，老版本升级上来的存量用例继续可用
             case "getText":
-                getTextAndAssert(eleName, eleType
-                        , eleValue, step.getString("content"));
+                getTextAndAssert(eleName, eleType, eleValue, step.getString("content"));
                 break;
             case "getWebViewText":
-                getWebViewTextAndAssert(eleName, eleType
-                        , eleValue, step.getString("content"));
+                getWebViewTextAndAssert(eleName, eleType, eleValue, step.getString("content"));
                 break;
             case "getPocoText":
-                getPocoTextAndAssert(eleName, eleType
-                        , eleValue, step.getString("content"));
+                getPocoTextAndAssert(eleName, eleType, eleValue, step.getString("content"));
                 break;
             // > 2.5版本的文本断言语法，支持指定断言的方式
             case "assertText":
-                getElementTextAndAssertWithOperation(
-                        eleName,
-                        eleType,
-                        eleValue,
-                        step.getString("content"), step.getString("text"),
-                        -1);
+                getElementTextAndAssertWithOperation(eleName, eleType, eleValue, step.getString("content"), step.getString("text"), -1);
                 break;
             case "assertWebViewText":
-                getElementTextAndAssertWithOperation(
-                        eleName,
-                        eleType,
-                        eleValue,
-                        step.getString("content"), step.getString("text"),
-                        -1);
+                getElementTextAndAssertWithOperation(eleName, eleType, eleValue, step.getString("content"), step.getString("text"), -1);
                 break;
             case "assertPocoText":
-                getElementTextAndAssertWithOperation(
-                        eleName,
-                        eleType,
-                        eleValue,
-                        step.getString("content"), step.getString("text"),
-                        -1);
+                getElementTextAndAssertWithOperation(eleName, eleType, eleValue, step.getString("content"), step.getString("text"), -1);
                 break;
         }
         switchType(step);
@@ -616,8 +557,15 @@ public class StepHandler {
         return null;
     }
 
-    private Object getText(String eleName, String eleType, String eleValue) {
-        notImplement();
+    private String getText(String des, String selector, String pathValue) {
+        CharSequence text = "";
+        resultInfo.setStepDes("获取" + des + "文本");
+        resultInfo.setDetail("获取" + selector + ":" + pathValue + "文本");
+        try {
+            return (String) findEle(selector, pathValue).getText();
+        } catch (Exception e) {
+            resultInfo.setE(e);
+        }
         return null;
     }
 
@@ -661,12 +609,246 @@ public class StepHandler {
         notImplement();
     }
 
-    private void sendKeyForce(String content) {
-        notImplement();
+    private void sendKeyForce(String keys) {
+        ShellUtil.execCmd("input text " + keys.replaceAll(" ", "%s"));
     }
 
     private void runMonkey(JSONObject content, List<JSONObject> text) {
-        notImplement();
+        resultInfo.setStepDes("运行随机事件测试完毕");
+        resultInfo.setDetail("");
+//        String packageName = content.getString("packageName");
+//        int pctNum = content.getInteger("pctNum");
+//        if (!ShellUtil.execCmd("pm list package").contains(packageName)) {
+////            log.sendStepLog(StepType.ERROR, "应用未安装！", "设备未安装 " + packageName);
+//            ToastUtil.showToast(contextWeakReference.get(), "设备未安装 " + packageName);
+//            resultInfo.setE(new Exception("未安装应用"));
+//            return;
+//        }
+//        JSONArray options = content.getJSONArray("options");
+//        Point screenSize = DeviceUtil.getScreenSize();
+//
+//        int width = screenSize.x;
+//        int height = screenSize.y;
+//        int sleepTime = 50;
+//        int systemEvent = 0;
+//        int tapEvent = 0;
+//        int longPressEvent = 0;
+//        int swipeEvent = 0;
+//        int navEvent = 0;
+//        boolean isOpenH5Listener = false;
+//        boolean isOpenPackageListener = false;
+//        boolean isOpenActivityListener = false;
+//        boolean isOpenNetworkListener = false;
+//        if (!options.isEmpty()) {
+//            for (Object j : options) {
+//                JSONObject jsonOption = JSON.parseObject(j.toString());
+//                if (jsonOption.getString("name").equals("sleepTime")) {
+//                    sleepTime = jsonOption.getInteger("value");
+//                }
+//                if (jsonOption.getString("name").equals("systemEvent")) {
+//                    systemEvent = jsonOption.getInteger("value");
+//                }
+//                if (jsonOption.getString("name").equals("tapEvent")) {
+//                    tapEvent = jsonOption.getInteger("value");
+//                }
+//                if (jsonOption.getString("name").equals("longPressEvent")) {
+//                    longPressEvent = jsonOption.getInteger("value");
+//                }
+//                if (jsonOption.getString("name").equals("swipeEvent")) {
+//                    swipeEvent = jsonOption.getInteger("value");
+//                }
+//                if (jsonOption.getString("name").equals("navEvent")) {
+//                    navEvent = jsonOption.getInteger("value");
+//                }
+//                if (jsonOption.getString("name").equals("isOpenH5Listener")) {
+//                    isOpenH5Listener = jsonOption.getBoolean("value");
+//                }
+//                if (jsonOption.getString("name").equals("isOpenPackageListener")) {
+//                    isOpenPackageListener = jsonOption.getBoolean("value");
+//                }
+//                if (jsonOption.getString("name").equals("isOpenActivityListener")) {
+//                    isOpenActivityListener = jsonOption.getBoolean("value");
+//                }
+//                if (jsonOption.getString("name").equals("isOpenNetworkListener")) {
+//                    isOpenNetworkListener = jsonOption.getBoolean("value");
+//                }
+//            }
+//        }
+//        int finalSleepTime = sleepTime;
+//        int finalTapEvent = tapEvent;
+//        int finalLongPressEvent = longPressEvent;
+//        int finalSwipeEvent = swipeEvent;
+//        int finalSystemEvent = systemEvent;
+//        int finalNavEvent = navEvent;
+//        Future<?> randomThread = AndroidDeviceThreadPool.cachedThreadPool.submit(() -> {
+//                    log.sendStepLog(StepType.INFO, "", "随机事件数：" + pctNum +
+//                            "<br>目标应用：" + packageName
+//                            + "<br>用户操作时延：" + finalSleepTime + " ms"
+//                            + "<br>轻触事件权重：" + finalTapEvent
+//                            + "<br>长按事件权重：" + finalLongPressEvent
+//                            + "<br>滑动事件权重：" + finalSwipeEvent
+//                            + "<br>物理按键事件权重：" + finalSystemEvent
+//                            + "<br>系统事件权重：" + finalNavEvent
+//                    );
+//                    openApp(new resultInfo(), packageName);
+//                    int totalCount = finalSystemEvent + finalTapEvent + finalLongPressEvent + finalSwipeEvent + finalNavEvent;
+//                    for (int i = 0; i < pctNum; i++) {
+//                        try {
+//                            int random = new Random().nextInt(totalCount);
+//                            if (random < finalSystemEvent) {
+//                                int key = new Random().nextInt(4);
+//                                String keyType = switch (key) {
+//                                    case 0 -> "HOME";
+//                                    case 1 -> "BACK";
+//                                    case 2 -> "MENU";
+//                                    case 3 -> "APP_SWITCH";
+//                                    default -> "";
+//                                };
+//                                InstrumentImpl.getInstance().pressKeyCode(AndroidKey.valueOf(keyType).getCode());
+//                            }
+//                            if (random >= finalSystemEvent && random < (finalSystemEvent + finalTapEvent)) {
+//                                int x = new Random().nextInt(width - 60) + 60;
+//                                int y = new Random().nextInt(height - 60) + 60;
+//                                TService.getInstance().clickPos(x, y);
+//                            }
+//                            if (random >= (finalSystemEvent + finalTapEvent) && random < (finalSystemEvent + finalTapEvent + finalLongPressEvent)) {
+//                                int x = new Random().nextInt(width - 60) + 60;
+//                                int y = new Random().nextInt(height - 60) + 60;
+//                                AndroidTouchHandler.longPress(iDevice, x, y, (new Random().nextInt(3) + 1) * 1000);
+//                            }
+//                            if (random >= (finalSystemEvent + finalTapEvent + finalLongPressEvent) && random < (finalSystemEvent + finalTapEvent + finalLongPressEvent + finalSwipeEvent)) {
+//                                int x1 = new Random().nextInt(width - 60) + 60;
+//                                int y1 = new Random().nextInt(height - 80) + 80;
+//                                int x2 = new Random().nextInt(width - 60) + 60;
+//                                int y2 = new Random().nextInt(height - 80) + 80;
+//                                AndroidTouchHandler.swipe(iDevice, x1, y1, x2, y2);
+//                            }
+//                            if (random >= (finalSystemEvent + finalTapEvent + finalLongPressEvent + finalSwipeEvent) && random < (finalSystemEvent + finalTapEvent + finalLongPressEvent + finalSwipeEvent + finalNavEvent)) {
+//                                int a = new Random().nextInt(2);
+//                                if (a == 1) {
+//                                    AndroidDeviceBridgeTool.executeCommand(iDevice, "svc wifi enable");
+//                                } else {
+//                                    AndroidDeviceBridgeTool.executeCommand(iDevice, "svc wifi disable");
+//                                }
+//                            }
+//                            Thread.sleep(finalSleepTime);
+//                        } catch (Throwable e) {
+//                            e.printStackTrace();
+//                        }
+//                    }
+//                }
+//        );
+//        boolean finalIsOpenH5Listener = isOpenH5Listener;
+//        Future<?> H5Listener = AndroidDeviceThreadPool.cachedThreadPool.submit(() -> {
+//                    if (finalIsOpenH5Listener) {
+//                        int h5Time = 0;
+//                        while (!randomThread.isDone()) {
+//                            try {
+//                                Thread.sleep(8000);
+//                            } catch (InterruptedException e) {
+//                                e.printStackTrace();
+//                            }
+//                            try {
+//                                if (androidDriver.findElementList(AndroidSelector.CLASS_NAME, "android.webkit.WebView").size() > 0) {
+//                                    h5Time++;
+//                                    AndroidDeviceBridgeTool.executeCommand(iDevice, "input keyevent 4");
+//                                } else {
+//                                    h5Time = 0;
+//                                }
+//                                if (h5Time >= 12) {
+//                                    AndroidDeviceBridgeTool.forceStop(iDevice, packageName);
+//                                    h5Time = 0;
+//                                }
+//                            } catch (Throwable ignored) {
+//                            }
+//                        }
+//                    }
+//                }
+//        );
+//        boolean finalIsOpenPackageListener = isOpenPackageListener;
+//        Future<?> packageListener = AndroidDeviceThreadPool.cachedThreadPool.submit(() -> {
+//                    if (finalIsOpenPackageListener) {
+//                        while (!randomThread.isDone()) {
+//                            int waitTime = 0;
+//                            while (waitTime <= 10 && (!randomThread.isDone())) {
+//                                try {
+//                                    Thread.sleep(5000);
+//                                } catch (InterruptedException e) {
+//                                    e.printStackTrace();
+//                                }
+//                                if (!AndroidDeviceBridgeTool.getCurrentActivity(iDevice).contains(packageName)) {
+//                                    AndroidDeviceBridgeTool.activateApp(iDevice, packageName);
+//                                }
+//                                waitTime++;
+//                            }
+//                            AndroidDeviceBridgeTool.activateApp(iDevice, packageName);
+//                        }
+//                    }
+//                }
+//        );
+//        boolean finalIsOpenActivityListener = isOpenActivityListener;
+//        Future<?> activityListener = AndroidDeviceThreadPool.cachedThreadPool.submit(() -> {
+//                    if (finalIsOpenActivityListener) {
+//                        if (text.isEmpty()) {
+//                            return;
+//                        }
+//                        Set<String> blackList = new HashSet<>();
+//                        for (com.alibaba.fastjson.JSONObject activities : text) {
+//                            blackList.add(activities.getString("name"));
+//                        }
+//                        while (!randomThread.isDone()) {
+//                            try {
+//                                Thread.sleep(8000);
+//                            } catch (InterruptedException e) {
+//                                e.printStackTrace();
+//                            }
+//                            if (blackList.contains(AndroidDeviceBridgeTool.getCurrentActivity(iDevice))) {
+//                                AndroidDeviceBridgeTool.executeCommand(iDevice, "input keyevent 4");
+//                            } else continue;
+//                            try {
+//                                Thread.sleep(8000);
+//                            } catch (InterruptedException e) {
+//                                e.printStackTrace();
+//                            }
+//                            if (blackList.contains(AndroidDeviceBridgeTool.getCurrentActivity(iDevice))) {
+//                                AndroidDeviceBridgeTool.forceStop(iDevice, packageName);
+//                            }
+//                        }
+//                    }
+//                }
+//        );
+//        boolean finalIsOpenNetworkListener = isOpenNetworkListener;
+//        Future<?> networkListener = AndroidDeviceThreadPool.cachedThreadPool.submit(() -> {
+//                    if (finalIsOpenNetworkListener) {
+//                        while (!randomThread.isDone()) {
+//                            try {
+//                                Thread.sleep(8000);
+//                            } catch (InterruptedException e) {
+//                                e.printStackTrace();
+//                            }
+//                            AndroidDeviceBridgeTool.executeCommand(iDevice, "settings put global airplane_mode_on 0");
+//                            try {
+//                                Thread.sleep(8000);
+//                            } catch (InterruptedException e) {
+//                                e.printStackTrace();
+//                            }
+//                            AndroidDeviceBridgeTool.executeCommand(iDevice, "svc wifi enable");
+//                        }
+//                    }
+//                }
+//        );
+//        try {
+//            Thread.sleep(500);
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
+//        log.sendStepLog(StepType.INFO, "", "测试目标包：" + packageName +
+//                (isOpenPackageListener ? "<br>应用包名监听器已开启..." : "") +
+//                (isOpenH5Listener ? "<br>H5页面监听器已开启..." : "") +
+//                (isOpenActivityListener ? "<br>黑名单Activity监听器..." : "") +
+//                (isOpenNetworkListener ? "<br>网络状态监听器已开启..." : ""));
+//        while (!randomThread.isDone() || (!packageListener.isDone()) || (!activityListener.isDone()) || (!networkListener.isDone()) || (!H5Listener.isDone())) {
+//        }
     }
 
     private void asserts(String actual, String expect, String stepType) {
@@ -674,15 +856,10 @@ public class StepHandler {
     }
 
     private void keyCode(String keyCode) {
+        resultInfo.setStepDes("按系统按键" + keyCode + "键");
+        resultInfo.setDetail("");
         Log.i(TAG, String.format("keyCode: press keyCode: [%s]", keyCode));
-        InstrumentImpl instrumentImpl = new InstrumentImpl();
-        switch (keyCode) {
-            case "HOME":
-                instrumentImpl.pressKeyCode(KeyEvent.KEYCODE_HOME);
-                break;
-            default:
-                notImplement();
-        }
+        new InstrumentImpl().pressKeyCode(AndroidKey.valueOf(keyCode).getCode());
     }
 
     private void keyCode(Integer content) {
@@ -706,7 +883,9 @@ public class StepHandler {
     }
 
     private void lock(Context handleContext) {
-        notImplement();
+        resultInfo.setStepDes("锁定屏幕");
+        resultInfo.setDetail("");
+        InstrumentImpl.getInstance().pressKeyCode(KeyEvent.KEYCODE_POWER);
     }
 
     private void uninstall(String text) {
@@ -807,19 +986,35 @@ public class StepHandler {
     private void isExistEle(String eleName, String eleType, String eleValue, Boolean content) {
         resultInfo.setStepDes("判断控件 " + eleName + " 是否存在");
         resultInfo.setDetail("期望值：" + (content ? "存在" : "不存在"));
-        boolean hasEle = false;
+        boolean existEle = false;
         try {
-            hasEle = findEle(eleType, eleValue);
+            existEle = hasEle(eleType, eleValue);
         } catch (Exception ignored) {
         }
         try {
-            assert hasEle == content;
+            assert existEle == content;
         } catch (AssertionError e) {
             resultInfo.setE(e);
         }
     }
 
-    private boolean findEle(String eleType, String eleValue) {
+    private AccessibilityNodeInfo findEle(String eleType, String eleValue) throws Exception {
+        eleValue = TextHandler.replaceTrans(eleValue, globalParams);
+        switch (eleType) {
+            case "androidIterator" : notImplement(); break;
+            case "id" : return TService.getInstance().findNode(By.res(eleValue));
+            case "accessibilityId" : return TService.getInstance().findNode(By.desc(eleValue));
+            case "xpath" : return TService.getInstance().findNode(By.xpath(eleValue));
+            case "className" : return TService.getInstance().findNode(By.className(eleValue));
+            case "androidUIAutomator" : notImplement();break;
+            default :
+                LogUtil.e(TAG, "findEle: " + "查找控件元素失败" + "这个控件元素类型: " + eleType + " 不存在!!!");
+//                    log.sendStepLog(StepType.ERROR, "查找控件元素失败", "这个控件元素类型: " + selector + " 不存在!!!");
+        }
+        return null;
+    }
+
+    private boolean hasEle(String eleType, String eleValue) {
         eleValue = TextHandler.replaceTrans(eleValue, globalParams);
         switch (eleType) {
             case "androidIterator" : notImplement(); break;
@@ -831,7 +1026,6 @@ public class StepHandler {
             default :
                 notImplement();
                 LogUtil.e(TAG, "findEle: " + "查找控件元素失败" + "这个控件元素类型: " + eleType + " 不存在!!!");
-//                    log.sendStepLog(StepType.ERROR, "查找控件元素失败", "这个控件元素类型: " + selector + " 不存在!!!");
         }
         return false;
     }
@@ -865,6 +1059,9 @@ public class StepHandler {
     }
 
     private void getTitle(String content) {
+//        String title = chromeDriver.getTitle();
+//        handleContext.setStepDes("验证网页标题");
+//        handleContext.setDetail("标题：" + title + "，期望值：" + expect);
         notImplement();
     }
 
@@ -885,7 +1082,7 @@ public class StepHandler {
                 clickDesc(eleValue);
                 break;
             case "xpath":
-                notImplement();
+                clickXpath(eleValue);
                 break;
             case "className":
                 clickClassName(eleValue);
@@ -897,6 +1094,15 @@ public class StepHandler {
                 String msg = "click: 查找控件元素失败, 这个控件元素类型: " + eleType + " 不存在!!!";
                 LogUtil.e(TAG, msg);
                 resultInfo.setE(new Exception(msg));
+        }
+    }
+
+    private void clickXpath(String eleValue) throws Exception {
+        try {
+            TService.getInstance().clickByXpath(eleValue);
+        } catch (Exception e) {
+            e.printStackTrace();
+            resultInfo.setE(e);
         }
     }
 
@@ -932,11 +1138,14 @@ public class StepHandler {
     }
 
     private void readText(String content, String text) {
-        notImplement();
+        resultInfo.setStepDes("图像文字识别");
+        resultInfo.setDetail("（该功能暂时关闭）期望包含文本：" + text);
     }
 
-    private void toHandle(String content) {
-        notImplement();
+    private void toHandle(String params) {
+        params = TextHandler.replaceTrans(params, globalParams);
+        resultInfo.setStepDes("切换Handle - Android Client 内不做处理");
+        resultInfo.setDetail("");
     }
 
     private void toWebView(String content, String text) {
@@ -945,15 +1154,21 @@ public class StepHandler {
 
     private void stepHold(Integer time) {
         resultInfo.setStepDes("设置全局步骤间隔");
-        resultInfo.setDetail("间隔" + time + " ms");
+        resultInfo.setDetail("间隔 " + time + " ms");
         Log.i(TAG, String.format("stepHold: set as [%s]", time));
         GConfigParams.holdTime = time;
     }
 
-    private void appAutoGrantPermissions(String text) {
-        // adb shell dumpsys package com.ape.soundrecorder | grep permission | grep granted=false
-        // adb shell pm grant <packageName> <permissionName>
-        notImplement();
+    private void appAutoGrantPermissions(String pkg) {
+        resultInfo.setStepDes("自动授权应用权限");
+        String targetPackageName = TextHandler.replaceTrans(pkg, globalParams);
+        resultInfo.setDetail("授权 " + targetPackageName);
+        try {
+            PermissionHelper.grantAllPermissions(contextWeakReference.get(), pkg);
+        } catch (PackageManager.NameNotFoundException e) {
+            Log.e(TAG, "appAutoGrantPermissions: " + pkg, e);
+            resultInfo.setE(e);
+        }
     }
 
     private void appReset(String pkg) {
@@ -962,7 +1177,7 @@ public class StepHandler {
         resultInfo.setDetail("清空 " + pkg);
 
         StringBuilder stringBuilder = new StringBuilder();
-        ShellUtil.execCmd("pm clear " + pkg, 3000, new ShellUtil.OnStreamChangedListener() {
+        ShellUtil.execCmd("pm clear " + pkg, new ShellUtil.OnStreamChangedListener() {
             @Override
             public void onStreamChanged(String line) {
 
@@ -972,11 +1187,14 @@ public class StepHandler {
             public void onErrorStreamChanged(String line) {
                 stringBuilder.append(line);
             }
-        });
+        }, 3000);
         resultInfo.setE(new Exception(stringBuilder.toString()));
     }
 
-    private void switchTouchMode(String content) {
-        notImplement();
+    private void switchTouchMode(String mode) {
+        resultInfo.setStepDes("设置触控模式");
+        resultInfo.setDetail("切换为 " + mode + " 模式");
+        // 暂不处理
+//        notImplement();
     }
 }

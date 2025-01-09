@@ -105,10 +105,9 @@ public class LoginActivity extends AppCompatActivity {
 //                .url("http://172.16.63.29/api/controller/users/login")
                 .url(Constant.URL_SERVER_LOGIN)
                 .post(body)
-//                .header("SonicToken", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsidGVzdCIsIjI5NDEzOTRkLWNkMzItNGEzZS05M2ZjLWIyOGM0NDZmY2I1ZSJdLCJleHAiOjE3MzUwMjQ4NjR9.7IYckg3-_w-7VYIBoL1wzbJVUKXUq2l9wBIGUxtzGQw")
                 .build();
 
-        // 使用 OkHttpClient 发送请求
+        // 发送请求
         client.newCall(request).enqueue(new okhttp3.Callback() {
 
             @Override

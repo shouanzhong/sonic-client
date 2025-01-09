@@ -2,6 +2,8 @@ package com.autotest.sonicclient.utils;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.os.SystemClock;
 import android.provider.Settings;
 import android.text.TextUtils;
@@ -59,6 +61,19 @@ public class PermissionHelper {
         } else {
             // 辅助功能已开启，可以继续使用
             Log.d(TAG, "Accessibility Service is enabled");
+        }
+    }
+
+    public static void grantAllPermissions(Context context, String pkg) throws PackageManager.NameNotFoundException {
+        PackageManager pm = context.getPackageManager();
+        PackageInfo pkgInfo = pm.getPackageInfo(pkg, PackageManager.GET_PERMISSIONS);
+        String[] permissions = pkgInfo.requestedPermissions;
+        if (permissions != null) {
+            for (String permission : permissions) {
+                if (pm.checkPermission(permission, pkg) == PackageManager.PERMISSION_DENIED) {
+                    ShellUtil.execCmd(String.format("pm grant %s %s", pkg, permission));
+                }
+            }
         }
     }
 }

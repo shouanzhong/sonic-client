@@ -3,11 +3,11 @@ package com.autotest.sonicclient.services;
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.GestureDescription;
 import android.graphics.Path;
+import android.graphics.Point;
 import android.graphics.Rect;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.util.Log;
-import android.view.MotionEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.accessibility.AccessibilityEvent;
 
@@ -15,13 +15,16 @@ import androidx.annotation.NonNull;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.autotest.sonicclient.model.Selector;
+import com.autotest.sonicclient.nodes.AccessibilityNodeInfoImpl;
 import com.autotest.sonicclient.utils.LogUtil;
 import com.autotest.sonicclient.utils.XMLUtil;
+
+import org.w3c.dom.Node;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
-import java.util.Locale;
 
 public class TService extends AccessibilityService {
     private static final String TAG = "TService";
@@ -41,6 +44,7 @@ public class TService extends AccessibilityService {
         super.onServiceConnected();
         Log.d(TAG, "Service connected");
         instance = this;
+        InjectorService.register(this);
     }
 
 
@@ -70,6 +74,36 @@ public class TService extends AccessibilityService {
     @Override
     public void onInterrupt() {
         // 中断服务时的处理逻辑
+    }
+
+    private void handleViewClicked(AccessibilityEvent event) {
+        AccessibilityNodeInfo source = event.getSource();
+        if (source != null) {
+            // 执行点击逻辑
+//            performClick(source);
+            Log.d(TAG, "handleViewClicked: 元素被点击: " + source.toString());
+            //  UI 变化
+            AccessibilityNodeInfo rootNode = getRootInActiveWindow();
+            if (rootNode != null) {
+                // 将所有界面元素转换成 JSON 格式
+//            JSONObject jsonOutput = toJson(rootNode);
+//            Log.d(TAG, "JSON Output:\n" + jsonOutput.toString());
+                String xml = XMLUtil.nodeToXml(rootNode);
+                Log.d(TAG, "handleViewClicked: xml : " + xml);
+            }
+        }
+    }
+
+    private void handleWindowContentChanged(AccessibilityEvent event) {
+        //  UI 变化
+        AccessibilityNodeInfo rootNode = getRootInActiveWindow();
+        if (rootNode != null) {
+            // 将所有界面元素转换成 JSON 格式
+//            JSONObject jsonOutput = toJson(rootNode);
+//            Log.d(TAG, "JSON Output:\n" + jsonOutput.toString());
+            String xml = XMLUtil.nodeToXml(rootNode);
+            Log.d(TAG, "handleWindowContentChanged: xml : " + xml);
+        }
     }
 
     public void sendKey() {
@@ -125,65 +159,7 @@ public class TService extends AccessibilityService {
             LogUtil.e(TAG, "读取界面失败", e);
             return "";
         }
-        return toXml(rootNode);
-    }
-
-    /**
-     * 将 AccessibilityNodeInfo 转换为 XML 字符串
-     *
-     * @param node AccessibilityNodeInfo 节点
-     * @return XML 字符串
-     */
-    private String toXml(AccessibilityNodeInfo node) {
-        if (node == null) {
-            return "<node/>";
-        }
-
-        StringBuilder xmlBuilder = new StringBuilder();
-        xmlBuilder.append("<node");
-
-        // 添加节点的基本属性
-        xmlBuilder.append(String.format(Locale.US, " index=\"%d\"", node.getParent() == null ? 0 : getIndex(node)));
-        xmlBuilder.append(String.format(" text=\"%s\"", safeString(node.getText())));
-        xmlBuilder.append(String.format(" resource-id=\"%s\"", safeString(node.getViewIdResourceName())));
-        xmlBuilder.append(String.format(" class=\"%s\"", safeString(node.getClassName())));
-        xmlBuilder.append(String.format(" package=\"%s\"", safeString(node.getPackageName())));
-        xmlBuilder.append(String.format(" content-desc=\"%s\"", safeString(node.getContentDescription())));
-        xmlBuilder.append(String.format(" checkable=\"%s\"", node.isCheckable()));
-        xmlBuilder.append(String.format(" checked=\"%s\"", node.isChecked()));
-        xmlBuilder.append(String.format(" clickable=\"%s\"", node.isClickable()));
-        xmlBuilder.append(String.format(" enabled=\"%s\"", node.isEnabled()));
-        xmlBuilder.append(String.format(" focusable=\"%s\"", node.isFocusable()));
-        xmlBuilder.append(String.format(" focused=\"%s\"", node.isFocused()));
-        xmlBuilder.append(String.format(" scrollable=\"%s\"", node.isScrollable()));
-        xmlBuilder.append(String.format(" long-clickable=\"%s\"", node.isLongClickable()));
-        xmlBuilder.append(String.format(" password=\"%s\"", node.isPassword()));
-        xmlBuilder.append(String.format(" selected=\"%s\"", node.isSelected()));
-
-        // 添加节点的边界属性
-        Rect bounds = new Rect();
-        node.getBoundsInScreen(bounds);
-        xmlBuilder.append(String.format(" bounds=\"[%d,%d][%d,%d]\"", bounds.left, bounds.top, bounds.right, bounds.bottom));
-
-        // 检查是否有子节点
-        if (node.getChildCount() == 0) {
-            xmlBuilder.append("/>"); // 无子节点时闭合标签
-        } else {
-            xmlBuilder.append(">"); // 开始子节点部分
-
-            // 遍历子节点
-            for (int i = 0; i < node.getChildCount(); i++) {
-                AccessibilityNodeInfo child = node.getChild(i);
-                if (child != null) {
-                    xmlBuilder.append(toXml(child)); // 递归处理子节点
-                    child.recycle(); // 回收子节点
-                }
-            }
-
-            xmlBuilder.append("</node>"); // 闭合当前节点标签
-        }
-
-        return xmlBuilder.toString();
+        return XMLUtil.nodeToXml(rootNode);
     }
 
     // 获取节点的索引
@@ -198,46 +174,6 @@ public class TService extends AccessibilityService {
             }
         }
         return 0;
-    }
-
-    /**
-     * 安全处理字符串，防止 NullPointerException
-     *
-     * @param charSequence 待处理的字符串
-     * @return 非空字符串
-     */
-    private static String safeString(CharSequence charSequence) {
-        return charSequence == null ? "" : charSequence.toString().replace("\"", "&quot;");
-    }
-
-    private void handleViewClicked(AccessibilityEvent event) {
-        AccessibilityNodeInfo source = event.getSource();
-        if (source != null) {
-            // 执行点击逻辑
-//            performClick(source);
-            Log.d(TAG, "handleViewClicked: 元素被点击: " + source.toString());
-            //  UI 变化
-            AccessibilityNodeInfo rootNode = getRootInActiveWindow();
-            if (rootNode != null) {
-                // 将所有界面元素转换成 JSON 格式
-//            JSONObject jsonOutput = toJson(rootNode);
-//            Log.d(TAG, "JSON Output:\n" + jsonOutput.toString());
-                String xml = XMLUtil.nodeToXml(rootNode);
-                Log.d(TAG, "handleViewClicked: xml : " + xml);
-            }
-        }
-    }
-
-    private void handleWindowContentChanged(AccessibilityEvent event) {
-        //  UI 变化
-        AccessibilityNodeInfo rootNode = getRootInActiveWindow();
-        if (rootNode != null) {
-            // 将所有界面元素转换成 JSON 格式
-//            JSONObject jsonOutput = toJson(rootNode);
-//            Log.d(TAG, "JSON Output:\n" + jsonOutput.toString());
-            String xml = XMLUtil.nodeToXml(rootNode);
-            Log.d(TAG, "handleWindowContentChanged: xml : " + xml);
-        }
     }
 
     /**
@@ -271,6 +207,80 @@ public class TService extends AccessibilityService {
         return false;
     }
 
+    public AccessibilityNodeInfo findNode(Selector selector) throws Exception {
+        AccessibilityNodeInfo accessibilityNodeInfo = getAccessibilityNodeInfo();
+        if (selector.getType().getValue().isEmpty()) {
+            return findByXpath(selector);
+        }
+        return findNode(accessibilityNodeInfo, selector);
+    }
+
+    private AccessibilityNodeInfo findByXpath(Selector selector) {
+        String xml = getXml();
+        Node node = XMLUtil.findNodeByXpath(selector.getValue(), xml);
+        if (node == null) {
+            return null;
+        }
+        return new AccessibilityNodeInfoImpl(node);
+    }
+
+    public AccessibilityNodeInfo findNode(AccessibilityNodeInfo rootNode, Selector selector) throws Exception {
+        if (rootNode == null) {
+            return null;
+        }
+
+        Class<AccessibilityNodeInfo> accessibilityNodeInfoClass = AccessibilityNodeInfo.class;
+        Method method = accessibilityNodeInfoClass.getMethod(selector.getType().getValue());
+        Object resVal = method.invoke(rootNode);
+        String val = null;
+        Log.i(TAG, "findNode: resVal: " + resVal);
+        if (resVal != null) {
+            if (resVal instanceof String) {
+                val = (String) resVal;
+            } else if (resVal instanceof Boolean) {
+                val = String.valueOf(resVal);
+            } else {
+                throw new Exception(String.format("Analyse Error: Value from Method is : %s, type: %s", resVal, resVal.getClass()));
+            }
+            if (selector.getValue().equals(val)) {
+                return rootNode;
+            }
+        }
+
+        for (int i = 0; i < rootNode.getChildCount(); i++) {
+            AccessibilityNodeInfo childNode = rootNode.getChild(i);
+            if (childNode != null) {
+                AccessibilityNodeInfo node = findNode(childNode, selector);
+                if (node != null) {
+                    return node;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private AccessibilityNodeInfo findByDesc(AccessibilityNodeInfo rootNode, String contentDescription) throws Exception {
+        if (rootNode == null) {
+            return null;
+        }
+
+        // 如果当前节点的 ContentDescription 匹配，则尝试点击
+        if (contentDescription.equals(rootNode.getContentDescription())) {
+            return rootNode;
+        }
+
+        // 遍历子节点递归查找
+        for (int i = 0; i < rootNode.getChildCount(); i++) {
+            AccessibilityNodeInfo childNode = rootNode.getChild(i);
+            if (childNode != null) {
+                return findByDesc(childNode, contentDescription);
+            }
+        }
+
+        return null;
+    }
+
     private boolean performClickByClassName(AccessibilityNodeInfo rootNode, String className) {
         if (rootNode == null) {
             return false;
@@ -299,7 +309,6 @@ public class TService extends AccessibilityService {
     private boolean performClick(AccessibilityNodeInfo nodeInfo) {
         if (nodeInfo == null) return false;
 
-
         if (nodeInfo.isClickable()) {
             nodeInfo.performAction(AccessibilityNodeInfo.ACTION_CLICK);
             return true;
@@ -325,7 +334,6 @@ public class TService extends AccessibilityService {
             return false;
         }
 
-//        List<AccessibilityNodeInfo> nodes = rootNode.findAccessibilityNodeInfosByText(text);
         if (!nodes.isEmpty()) {
             for (AccessibilityNodeInfo node : nodes) {
                 if (performClick(node)) {
@@ -337,7 +345,7 @@ public class TService extends AccessibilityService {
     }
 
     @NonNull
-    private AccessibilityNodeInfo getAccessibilityNodeInfo() throws Exception {
+    AccessibilityNodeInfo getAccessibilityNodeInfo() throws Exception {
         AccessibilityNodeInfo rootNode = getRootInActiveWindow();
         long timeStart = System.currentTimeMillis();
         while (timeStart + TIMEOUT > System.currentTimeMillis() && rootNode == null) {
@@ -399,19 +407,11 @@ public class TService extends AccessibilityService {
         }
     }
 
-    // 查找节点并执行点击
-    public void findAndClick(String text) {
-        AccessibilityNodeInfo rootNode = getRootInActiveWindow();
-        if (rootNode == null) return;
-
-        // 根据文本查找节点
-        List<AccessibilityNodeInfo> nodes = rootNode.findAccessibilityNodeInfosByText(text);
-        if (!nodes.isEmpty()) {
-            for (AccessibilityNodeInfo node : nodes) {
-                if (performClick(node)) {
-                    break;
-                }
-            }
-        }
+    public void clickByXpath(String xpath) throws Exception {
+        String xml = getXml();
+        Node node = XMLUtil.findNodeByXpath(xpath, xml);
+        String bounds = node.getAttributes().getNamedItem("bounds").getNodeValue();
+        Point point = XMLUtil.parseBoundsCenter(bounds);
+        clickPos(point.x, point.y);
     }
 }

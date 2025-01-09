@@ -67,15 +67,17 @@ public class SuitActivity extends BaseActivity {
             List<String> checkedGroups = adapter.getCheckedGroups();
             ToastUtil.showToast(this, "Start: " + checkedGroups);
             for (String projectName : checkedGroups) {
-                String pid = mapNameAndId.get(projectName);
-                LogUtil.d(TAG, "onClick: projectId: " + pid);
-                HttpUtil.get(String.format(Constant.URL_SERVER_TESTCASE_LIST, pid), new HttpUtil.Callback<JSONObject>() {
+                String sid = mapNameAndId.get(projectName);
+                LogUtil.d(TAG, "onClick: suitId: " + sid);
+                HttpUtil.get(String.format(Constant.URL_SERVER_TESTCASE_LIST, sid), new HttpUtil.Callback<JSONObject>() {
                     @Override
                     public void onResponse(Call call, JSONObject item) throws IOException {
+                        item.put("sid", Integer.parseInt(sid));
                         RunService.startActionRunSuit(SuitActivity.this, item);
                     }
                 });
             }
+            
 //            JSONObject jsonObject = JsonParser.readJsonFromAssets(this, "suitCaseTemp.json");
 
         });
