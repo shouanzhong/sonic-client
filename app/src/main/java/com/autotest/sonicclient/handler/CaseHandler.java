@@ -6,6 +6,8 @@ import android.util.Log;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.autotest.sonicclient.model.CaseResult;
+import com.autotest.sonicclient.model.ResultInfo;
+import com.autotest.sonicclient.services.InjectorService;
 import com.autotest.sonicclient.utils.Constant;
 import com.autotest.sonicclient.utils.JsonParser;
 import com.autotest.sonicclient.utils.LogUtil;
@@ -18,29 +20,35 @@ public class CaseHandler {
 
     public static CaseResult runCase(Context context, JSONObject caseInfo) {
         LogHandler.clearLogcat();
-        CaseResult caseResult = new CaseResult();
-        StepHandler stepHandler = new StepHandler(context);
+//        StepHandlerWrapper stepHandlerWrapper = new StepHandlerWrapper(context);
+        StepHandlerWrapper stepHandlerWrapper = InjectorService.getService(StepHandlerWrapper.class);
         int cid = caseInfo.getInteger(Constant.KEY_CASE_INFO_CID);
         int rid = caseInfo.getInteger(Constant.KEY_CASE_INFO_RID);
-        stepHandler.getResultInfo().setCaseId(cid);
-        stepHandler.getResultInfo().setResultId(rid);
+
+        CaseResult caseResult = new CaseResult();
         caseResult.setCid(cid);
         caseResult.setRid(rid);
+
+        ResultInfo resultInfo = new ResultInfo();
+        resultInfo.setCaseId(cid);
+        resultInfo.setResultId(rid);
+
         List<JSONObject> steps = JsonParser.parseStep(caseInfo);
         for (JSONObject step : steps) {
             LogUtil.i(TAG, "SuitInfoListener: step: " + step);
             try {
-                stepHandler.runStep(step);
+                resultInfo.clearStep();
+                stepHandlerWrapper.runStep(step, resultInfo);
             } catch (Throwable e) {
-                LogUtil.e(TAG, String.format("步骤[%s]执行异常: ", step.getJSONObject("step").getString("stepType")), e);
-                stepHandler.getResultInfo().setE(e);
-                stepHandler.getResultInfo().packError();
-                stepHandler.getResultInfo().collect();
+                LogUtil.e(TAG, String.format("步骤[%s]执行异常: ", step.getJSONObject(Constant.KEY_STEP_INFO_STEP).getString(Constant.KEY_STEP_INFO_TYPE)), e);
+                resultInfo.setE(e);
+                resultInfo.packError();
+                resultInfo.collect();
                 break;
             }
         }
         String logPath = "";
-        Throwable e1 = stepHandler.getResultInfo().getE();
+        Throwable e1 = resultInfo.getE();
         if (e1 != null) {
             try {
                 logPath = LogHandler.dumpLogcat(context, (String) caseInfo.get("desc"));
@@ -49,7 +57,7 @@ public class CaseHandler {
                 logPath = "Fail to dump logcat !! " + e.getMessage();
             }
         }
-        JSONArray stepResultList = stepHandler.getResultInfo().getStepResultList();
+        JSONArray stepResultList = resultInfo.getStepResultList();
         caseResult.setSteps(stepResultList);
         caseResult.setLogUri(logPath);
         Log.i(TAG, "handle: case result:" + caseResult);

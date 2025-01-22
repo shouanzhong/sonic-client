@@ -2,35 +2,23 @@
   "msg": "suite",
   "cases": [
     {
+      "rid": 43,
+      "perf": {
+        "isOpen": 0,
+        "perfInterval": 1000
+      },
       "steps": [
         {
           "step": {
-            "id": 3,
+            "id": 29,
             "parentId": 0,
-            "projectId": 1,
-            "caseId": 2,
-            "platform": 1,
-            "stepType": "appReset",
-            "content": "",
-            "text": "com.android.chrome",
-            "sort": 1,
-            "error": 3,
-            "conditionType": 0,
-            "disabled": 0,
-            "elements": []
-          }
-        },
-        {
-          "step": {
-            "id": 13,
-            "parentId": 0,
-            "projectId": 1,
-            "caseId": 2,
+            "projectId": 2,
+            "caseId": 3,
             "platform": 1,
             "stepType": "stepHold",
             "content": "1000",
             "text": "",
-            "sort": 2,
+            "sort": 19,
             "error": 3,
             "conditionType": 0,
             "disabled": 0,
@@ -39,15 +27,15 @@
         },
         {
           "step": {
-            "id": 1,
+            "id": 24,
             "parentId": 0,
-            "projectId": 1,
-            "caseId": 2,
+            "projectId": 2,
+            "caseId": 3,
             "platform": 1,
             "stepType": "keyCode",
             "content": "HOME",
             "text": "",
-            "sort": 3,
+            "sort": 20,
             "error": 3,
             "conditionType": 0,
             "disabled": 0,
@@ -56,15 +44,15 @@
         },
         {
           "step": {
-            "id": 14,
+            "id": 28,
             "parentId": 0,
-            "projectId": 1,
-            "caseId": 2,
+            "projectId": 2,
+            "caseId": 3,
             "platform": 1,
             "stepType": "stepHold",
             "content": "1000",
             "text": "",
-            "sort": 4,
+            "sort": 21,
             "error": 3,
             "conditionType": 0,
             "disabled": 0,
@@ -73,25 +61,25 @@
         },
         {
           "step": {
-            "id": 2,
+            "id": 21,
             "parentId": 0,
-            "projectId": 1,
-            "caseId": 2,
+            "projectId": 2,
+            "caseId": 3,
             "platform": 1,
             "stepType": "click",
             "content": "",
             "text": "",
-            "sort": 5,
+            "sort": 24,
             "error": 3,
             "conditionType": 0,
             "disabled": 0,
             "elements": [
               {
-                "id": 1,
-                "eleName": "chome桌面图标text",
+                "id": 7,
+                "eleName": "Camera",
                 "eleType": "accessibilityId",
-                "eleValue": "Chrome",
-                "projectId": 1,
+                "eleValue": "Camera",
+                "projectId": 2,
                 "moduleId": 0
               }
             ]
@@ -99,15 +87,15 @@
         },
         {
           "step": {
-            "id": 15,
+            "id": 30,
             "parentId": 0,
-            "projectId": 1,
-            "caseId": 2,
+            "projectId": 2,
+            "caseId": 3,
             "platform": 1,
             "stepType": "stepHold",
-            "content": "2000",
+            "content": "1000",
             "text": "",
-            "sort": 6,
+            "sort": 25,
             "error": 3,
             "conditionType": 0,
             "disabled": 0,
@@ -116,138 +104,123 @@
         },
         {
           "step": {
-          "caseId": 2,
-          "conditionType": 0,
-          "content": "",
-          "disabled": 0,
-          "elements": [
-            {
-              "eleName": "Accept & continue",
-              "eleType": "id",
-              "eleValue": "com.android.chrome:id/terms_accept",
-              "id": 2,
-              "moduleId": 0,
-              "projectId": 1
-            }
-          ],
-          "error": 3,
-          "id": 5,
-          "parentId": 4,
-          "platform": 1,
-          "projectId": 1,
-          "sort": 8,
-          "stepType": "click",
-          "text": ""
-        }
+            "id": 22,
+            "parentId": 0,
+            "projectId": 2,
+            "caseId": 3,
+            "platform": 1,
+            "stepType": "click",
+            "content": "",
+            "text": "",
+            "sort": 26,
+            "error": 3,
+            "conditionType": 0,
+            "disabled": 0,
+            "elements": [
+              {
+                "id": 13,
+                "eleName": "CAMERA_ITEM_PICTURE",
+                "eleType": "id",
+                "eleValue": "com.mediatek.camera:id/shutter_text",
+                "projectId": 2,
+                "moduleId": 3
+              }
+            ]
+          }
         },
-        {"step": {
-          "caseId": 2,
-          "conditionType": 0,
-          "content": "1000",
-          "disabled": 0,
-          "elements": [],
-          "error": 3,
-          "id": 16,
-          "parentId": 4,
-          "platform": 1,
-          "projectId": 1,
-          "sort": 18,
-          "stepType": "stepHold",
-          "text": ""
-        }},
-        {"step": {
-          "caseId": 2,
-          "conditionType": 0,
-          "content": "",
-          "disabled": 0,
-          "elements": [
-            {
-              "eleName": "No thanks",
-              "eleType": "id",
-              "eleValue": "com.android.chrome:id/negative_button",
-              "id": 3,
-              "moduleId": 0,
-              "projectId": 1
-            }
-          ],
-          "error": 3,
-          "id": 7,
-          "parentId": 6,
-          "platform": 1,
-          "projectId": 1,
-          "sort": 10,
-          "stepType": "click",
-          "text": ""
-        }},
-        {"step": {
-          "caseId": 2,
-          "conditionType": 0,
-          "content": "",
-          "disabled": 0,
-          "elements": [
-            {
-              "eleName": "No thanks",
-              "eleType": "id",
-              "eleValue": "com.android.chrome:id/negative_button",
-              "id": 4,
-              "moduleId": 0,
-              "projectId": 1
-            }
-          ],
-          "error": 3,
-          "id": 9,
-          "parentId": 8,
-          "platform": 1,
-          "projectId": 1,
-          "sort": 12,
-          "stepType": "click",
-          "text": ""
-        }},
         {
           "step": {
-            "id": 12,
+            "id": 31,
             "parentId": 0,
-            "projectId": 1,
-            "caseId": 2,
+            "projectId": 2,
+            "caseId": 3,
             "platform": 1,
             "stepType": "stepHold",
-            "content": "2000",
+            "content": "1000",
             "text": "",
-            "sort": 14,
+            "sort": 27,
             "error": 3,
             "conditionType": 0,
             "disabled": 0,
             "elements": []
+          }
+        },
+        {
+          "step": {
+            "id": 23,
+            "parentId": 0,
+            "projectId": 2,
+            "caseId": 3,
+            "platform": 1,
+            "stepType": "click",
+            "content": "",
+            "text": "",
+            "sort": 28,
+            "error": 3,
+            "conditionType": 0,
+            "disabled": 0,
+            "elements": [
+              {
+                "id": 12,
+                "eleName": "CAMERA_MTK_SHUTTER_BUTTON",
+                "eleType": "id",
+                "eleValue": "com.mediatek.camera:id/shutter_button",
+                "projectId": 2,
+                "moduleId": 0
+              }
+            ]
+          }
+        },
+        {
+          "step": {
+            "id": 26,
+            "parentId": 0,
+            "projectId": 2,
+            "caseId": 3,
+            "platform": 1,
+            "stepType": "stepHold",
+            "content": "1000",
+            "text": "",
+            "sort": 29,
+            "error": 3,
+            "conditionType": 0,
+            "disabled": 0,
+            "elements": []
+          }
+        },
+        {
+          "step": {
+            "id": 32,
+            "parentId": 0,
+            "projectId": 2,
+            "caseId": 3,
+            "platform": 1,
+            "stepType": "tap",
+            "content": "",
+            "text": "",
+            "sort": 30,
+            "error": 3,
+            "conditionType": 0,
+            "disabled": 0,
+            "elements": [
+              {
+                "id": 11,
+                "eleName": "坐标2",
+                "eleType": "point",
+                "eleValue": "540,2086",
+                "projectId": 2,
+                "moduleId": 0
+              }
+            ]
           }
         }
       ],
       "device": [
-        {
-          "id": 6,
-          "agentId": 1,
-          "cpu": "armeabi-v7a",
-          "imgUrl": "",
-          "manufacturer": "INFINIX",
-          "model": "Infinix X6526",
-          "name": "X6526-OP",
-          "password": "",
-          "platform": 1,
-          "isHm": 0,
-          "size": "720x1612",
-          "status": "ONLINE",
-          "udId": "V658X65260123456",
-          "version": "13",
-          "nickName": "",
-          "user": "",
-          "chiName": "",
-          "temperature": 283,
-          "voltage": 4417,
-          "level": 100,
-          "position": 0
-        }
+        null
       ],
-      "cid": 2
+      "cid": 3
     }
   ],
-  "pf": 1
+  "pf": 1,
+  "sid": 3
 }

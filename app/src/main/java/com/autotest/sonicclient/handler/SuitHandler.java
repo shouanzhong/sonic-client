@@ -1,12 +1,16 @@
 package com.autotest.sonicclient.handler;
 
 import android.content.Context;
+import android.os.SystemClock;
+import android.util.Log;
+import android.view.KeyEvent;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.autotest.sonicclient.model.CaseResult;
 import com.autotest.sonicclient.model.SuitResult;
 import com.autotest.sonicclient.utils.Constant;
+import com.autotest.sonicclient.utils.InstrumentImpl;
 import com.autotest.sonicclient.utils.JsonParser;
 import com.autotest.sonicclient.utils.LogUtil;
 
@@ -15,8 +19,11 @@ public class SuitHandler {
 
 
     public static SuitResult runSuit(Context context, JSONObject suitInfo) {
+        LogUtil.d(TAG, "runSuit: suitInfo: " + suitInfo);
         SuitResult suitResult = new SuitResult();
         suitResult.setSid(suitInfo.getInteger(Constant.KEY_SUIT_INFO_SID));
+
+        beforeTest();
 
         JsonParser.parseTestSuit(suitInfo, new JsonParser.SuitInfoListener() {
             @Override
@@ -27,5 +34,10 @@ public class SuitHandler {
         });
         LogUtil.d(TAG, "handleActionRunSuit: " + suitResult);
         return suitResult;
+    }
+
+    private static void beforeTest() {
+        InstrumentImpl.getInstance().pressKeyCode(KeyEvent.KEYCODE_HOME);
+        SystemClock.sleep(2000);
     }
 }

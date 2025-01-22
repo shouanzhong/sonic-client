@@ -2,13 +2,9 @@ package com.autotest.sonicclient.utils;
 
 import com.orhanobut.logger.Logger;
 
-/**
- * 打印 log
- */
+
 public class LogUtil {
-    /**
-     * 日志级别
-     */
+    // 日志级别
     public static int LOG_LEVEL = 0;
 
     public static void d(String tag, String message, Object... args) {

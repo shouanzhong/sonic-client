@@ -20,6 +20,6 @@ public class By {
     }
 
     public static Selector xpath(String path) {
-        return new Selector(SelectorTypes.CLASS, path);
+        return new Selector(SelectorTypes.XPATH, path);
     }
 }

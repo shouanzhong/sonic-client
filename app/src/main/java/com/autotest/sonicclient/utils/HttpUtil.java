@@ -149,7 +149,10 @@ public class HttpUtil {
         public void onResponse(Call call, Response response) throws IOException {
             String bodyString = null;
             if (!response.isSuccessful() || !(JSONObject.parse(bodyString = response.body().string()).getInteger("code") + "").startsWith("2")) {
-                onFailure(call, new IOException(String.format("Received http response body: %s", bodyString)));
+                onFailure(call, new IOException(String.format("Received http response :" +
+                        "\nresponse: %s" +
+                        "\nbody: %s",
+                        response, bodyString)));
                 return;
             }
             LogUtil.d(TAG, String.format("onResponse: %s", bodyString));
@@ -164,7 +167,7 @@ public class HttpUtil {
         @Override
         public void onFailure(@NonNull Call call, @NonNull IOException e) {
             LogUtil.e(TAG, "request error ", e);
-//            ToastUtil.showToast("request fail !");
+            ToastUtil.showToast("请求发送失败");
 //            SharePreferenceUtil.getInstance(ApplicationImpl.getInstance()).clear(Constant.KEY_SONIC_TOKEN);
 //            GConfig.SONIC_TOKEN = "";
         }

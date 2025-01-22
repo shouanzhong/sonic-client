@@ -56,19 +56,19 @@ public class TService extends AccessibilityService {
         // 事件类型
         int eventType = event.getEventType();
         Log.i(TAG, "onAccessibilityEvent: evntType = " + eventType);
-        switch (eventType) {
-            case AccessibilityEvent.TYPE_VIEW_CLICKED:
-                handleViewClicked(event);
-                break;
-            case AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED:
-                handleWindowContentChanged(event);
-                break;
-            case AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED:
-                break;
-            default:
-                // 处理其他事件
-                break;
-        }
+//        switch (eventType) {
+//            case AccessibilityEvent.TYPE_VIEW_CLICKED:
+//                handleViewClicked(event);
+//                break;
+//            case AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED:
+//                handleWindowContentChanged(event);
+//                break;
+//            case AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED:
+//                break;
+//            default:
+//                // 处理其他事件
+//                break;
+//        }
     }
 
     @Override

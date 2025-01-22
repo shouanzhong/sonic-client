@@ -102,7 +102,6 @@ public class LoginActivity extends AppCompatActivity {
 
         // 构造请求
         Request request = new Request.Builder()
-//                .url("http://172.16.63.29/api/controller/users/login")
                 .url(Constant.URL_SERVER_LOGIN)
                 .post(body)
                 .build();

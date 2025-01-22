@@ -15,53 +15,40 @@
  *   You should have received a copy of the GNU Affero General Public License
  *   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package com.autotest.sonicclient.enums;
-
-import java.io.Serializable;
+package com.autotest.sonicclient.threads;
 
 
-public enum ConditionEnum implements SonicEnum<Integer>, Serializable {
+import com.autotest.sonicclient.utils.LogUtil;
 
-    /**
-     * 非条件
-     */
-    NONE(0, "none"),
+public class RunStepThread extends Thread {
 
-    /**
-     * if 条件
-     */
-    IF(1, "if"),
+    protected volatile boolean stopped = false;
 
-    /**
-     * else if 条件
-     */
-    ELSE_IF(2, "else_if"),
+    protected volatile int platformType;
 
-    /**
-     * else 条件
-     */
-    ELSE(3, "else"),
+    protected LogUtil logUtil;
 
-    /**
-     * while 条件
-     */
-    WHILE(4, "while");
-
-    private final Integer value;
-
-    private final String name;
-
-    ConditionEnum(int value, String name) {
-        this.value = value;
-        this.name = name;
+    public int getPlatformType() {
+        return platformType;
     }
 
-    @Override
-    public Integer getValue() {
-        return value;
+    public void setPlatformType(int platformType) {
+        this.platformType = platformType;
     }
 
-    public String getName() {
-        return name;
+    public LogUtil getLogTool() {
+        return logUtil;
+    }
+
+    public void setLogTool(LogUtil logUtil) {
+        this.logUtil = logUtil;
+    }
+
+    public boolean isStopped() {
+        return stopped;
+    }
+
+    public void setStopped(boolean stopped) {
+        this.stopped = stopped;
     }
 }

@@ -26,4 +26,5 @@ public class Constant {
 
     public static final String KEY_STEP_INFO_STEP = "step";
     public static final String KEY_STEP_INFO_TYPE = "stepType";
+    public static final String KEY_STEP_INFO_CONDITION_TYPE = "conditionType";
 }

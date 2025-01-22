@@ -28,6 +28,7 @@ public class ReportHandler {
     public static String LOG_FILE_URL = "";
 
     public static void send(SuitResult suitResult) {
+        Log.d(TAG, "send: suitResult: " + suitResult);
         sendLog(suitResult);
         sendResult(REPORT_URL, suitResult);
     }
@@ -53,6 +54,7 @@ public class ReportHandler {
                 MinioUtil.builder().setBucketName(ApplicationImpl.getInstance().getPackageName())
                         .build().upload(file.getAbsolutePath(), file.getName());
                 caseInfo.setLogUri(file.getName());
+                file.delete();
             } catch (Exception e) {
                 e.printStackTrace();
                 Log.e(TAG, "sendLog: fail: " + file, e);

@@ -2,13 +2,11 @@ package com.autotest.sonicclient.handler;
 
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.graphics.Point;
 import android.os.SystemClock;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 
-import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.autotest.sonicclient.enums.AndroidKey;
@@ -16,11 +14,12 @@ import com.autotest.sonicclient.enums.ConditionEnum;
 import com.autotest.sonicclient.enums.ErrorType;
 import com.autotest.sonicclient.enums.SonicEnum;
 import com.autotest.sonicclient.enums.StepType;
+import com.autotest.sonicclient.interfaces.HandlerService;
+import com.autotest.sonicclient.interfaces.IStepHandler;
 import com.autotest.sonicclient.model.By;
 import com.autotest.sonicclient.model.ResultInfo;
 import com.autotest.sonicclient.services.TService;
 import com.autotest.sonicclient.utils.Constant;
-import com.autotest.sonicclient.utils.DeviceUtil;
 import com.autotest.sonicclient.utils.GConfigParams;
 import com.autotest.sonicclient.utils.InstrumentImpl;
 import com.autotest.sonicclient.utils.JsonParser;
@@ -30,30 +29,31 @@ import com.autotest.sonicclient.utils.ShellUtil;
 import com.autotest.sonicclient.utils.ToastUtil;
 
 import java.lang.ref.WeakReference;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
-import java.util.Set;
-import java.util.concurrent.Future;
-
-public class StepHandler {
+@HandlerService
+public class StepHandler extends StepHandlerBase implements IStepHandler {
     private static final String TAG = "StepHandler";
     Context handleContext;
-    WeakReference<Context> contextWeakReference;
     private final JSONObject globalParams = new JSONObject();
 
-    private final ResultInfo resultInfo = new ResultInfo();
-
+    private ResultInfo resultInfo = new ResultInfo();
 
     public StepHandler(Context context) {
-        contextWeakReference = new WeakReference<>(context);
+        super(context);
     }
+
 
     public ResultInfo getResultInfo() {
         return resultInfo;
     }
 
     public void runStep(JSONObject stepJSON) throws Throwable {
+        runStep(stepJSON, resultInfo);
+    }
+
+    public ResultInfo runStep(JSONObject stepJSON, ResultInfo resultInfo) throws Throwable {
+        LogUtil.d(TAG, String.format("runStep: stepJSON : %s", stepJSON));
+        this.resultInfo = resultInfo;
         resultInfo.clearStep();
         String stepType = stepJSON.getJSONObject(Constant.KEY_STEP_INFO_STEP).getString(Constant.KEY_STEP_INFO_TYPE);
         try {
@@ -66,6 +66,18 @@ public class StepHandler {
         } finally {
             resultInfo.collect();
         }
+        return resultInfo;
+    }
+
+    @Override
+    public ConditionEnum getCondition() {
+        return ConditionEnum.NONE;
+    }
+
+    @Override
+    public JSONObject handlerPublicStep(JSONObject step) {
+        notImplement();
+        return IStepHandler.super.handlerPublicStep(step);
     }
 
     private void handleStep(JSONObject stepJSON) throws Throwable {
@@ -414,7 +426,7 @@ public class StepHandler {
         String stepDes = resultInfo.getStepDes();
         String detail = resultInfo.getDetail();
         Throwable e = resultInfo.getE();
-        if (e != null && !"exit while".equals(e.getMessage()) && !e.getMessage().startsWith("IGNORE:")) {
+        if (e != null && !"exit while".equals(e.getMessage()) && (e.getMessage() == null || !e.getMessage().startsWith("IGNORE:"))) {
             switch (ErrorType.fromValue(error)) {
                 case IGNORE:
                     if (stepJson.getInteger("conditionType").equals(ConditionEnum.NONE.getValue())) {
@@ -1014,13 +1026,13 @@ public class StepHandler {
         return null;
     }
 
-    private boolean hasEle(String eleType, String eleValue) {
+    private boolean hasEle(String eleType, String eleValue) throws Exception {
         eleValue = TextHandler.replaceTrans(eleValue, globalParams);
         switch (eleType) {
             case "androidIterator" : notImplement(); break;
             case "id" : return TService.getInstance().getXml().contains(String.format("id=\"%s\"", eleValue));
             case "accessibilityId" : return TService.getInstance().getXml().contains(String.format("desc=\"%s\"", eleValue));
-            case "xpath" : notImplement();break;
+            case "xpath" : return TService.getInstance().findNode(By.xpath(eleValue)) != null;
             case "className" : return TService.getInstance().getXml().contains(String.format("class=\"%s\"", eleValue));
             case "androidUIAutomator" : notImplement();break;
             default :

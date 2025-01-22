@@ -27,6 +27,7 @@ android {
         targetCompatibility JavaVersion.VERSION_1_8
     }
 
+
     signingConfigs {
         release {
             storeFile file("../signer/system.jks")
@@ -59,5 +60,5 @@ dependencies {
     implementation ('com.orhanobut:logger:2.2.0') {
         exclude group: "com.android.support"
     }
-    implementation("io.minio:minio:8.5.14")
+    implementation("io.minio:minio:8.5.8")
 }

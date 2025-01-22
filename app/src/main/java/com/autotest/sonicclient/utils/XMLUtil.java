@@ -7,9 +7,13 @@ import android.view.WindowInsetsAnimation;
 import android.view.accessibility.AccessibilityNodeInfo;
 
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
+import java.io.IOException;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Locale;
 import java.util.regex.Matcher;
@@ -17,6 +21,13 @@ import java.util.regex.Pattern;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
@@ -32,7 +43,7 @@ public class XMLUtil {
         }
 
         StringBuilder xmlBuilder = new StringBuilder();
-        xmlBuilder.append("<node");
+        xmlBuilder.append("<").append(safeString(node.getClassName()));
 
         // 添加节点的基本属性
         xmlBuilder.append(String.format(Locale.US, " index=\"%d\"", node.getParent() == null ? 0 : getIndex(node)));
@@ -72,7 +83,7 @@ public class XMLUtil {
                 }
             }
             // 闭合
-            xmlBuilder.append("</node>");
+            xmlBuilder.append("</").append(safeString(node.getClassName())).append(">");
         }
 
         return xmlBuilder.toString();
@@ -135,26 +146,65 @@ public class XMLUtil {
     }
 
     public static NodeList findNodesByXpath(String xString, String xml) {
+        return findNodesByXpath(xString, xml, false);
+    }
+
+    public static NodeList findNodesByXpath(String xString, String xml, boolean toAppium) {
         try {
-            // 创建 Document 对象
+            if (toAppium) {
+                xml = tag2Class(xml);
+            }
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            factory.setNamespaceAware(true); // 启用命名空间
             DocumentBuilder builder = factory.newDocumentBuilder();
             Document document = builder.parse(new java.io.ByteArrayInputStream(xml.getBytes()));
 
-            // 创建 XPath 工厂和 XPath 对象
             XPathFactory xPathFactory = XPathFactory.newInstance();
             XPath xpath = xPathFactory.newXPath();
 
-            // 编译 XPath 表达式
             XPathExpression expr = xpath.compile(xString);
 
-            // 执行 XPath 查询
             NodeList nodes = (NodeList) expr.evaluate(document, XPathConstants.NODESET);
             return nodes;
         } catch (Exception e) {
             e.printStackTrace();
         }
         return null;
+    }
+
+    private static String tag2Class(String xml) throws ParserConfigurationException, IOException, SAXException, TransformerException {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        Document document = builder.parse(new java.io.ByteArrayInputStream(xml.getBytes()));
+
+        // 更新
+        modifyNodeNames(document, document.getDocumentElement());
+
+        // 输出
+        TransformerFactory transformerFactory = TransformerFactory.newInstance();
+        Transformer transformer = transformerFactory.newTransformer();
+        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+        transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
+
+        StringWriter writer = new StringWriter();
+        transformer.transform(new DOMSource(document), new StreamResult(writer));
+        return writer.toString();
+    }
+
+    private static void modifyNodeNames(Document document, Node node) {
+        if (node.getNodeType() == Node.ELEMENT_NODE) {
+            Element element = (Element) node;
+            String classAttr = element.getAttribute("class");
+            if (!classAttr.isEmpty()) {
+                // 改成 class 属性值
+                document.renameNode(element, element.getNamespaceURI(), classAttr);
+            }
+        }
+
+        NodeList childNodes = node.getChildNodes();
+        for (int i = 0; i < childNodes.getLength(); i++) {
+            modifyNodeNames(document, childNodes.item(i));
+        }
     }
 
     public static Point parseBoundsCenter(String s) {

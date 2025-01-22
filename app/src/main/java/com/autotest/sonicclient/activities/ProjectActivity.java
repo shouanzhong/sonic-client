@@ -1,6 +1,8 @@
 package com.autotest.sonicclient.activities;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
+import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -53,14 +55,18 @@ public class ProjectActivity extends BaseActivity {
         adapter = new MyAdapter(dataList, position -> {
             // 点击事件处理
             String item = dataList.get(position);
-            ToastUtil.showToast("Clicked: " + item);
+            ToastUtil.showToast("进入项目: " + item);
             Intent intent = new Intent(this, SuitActivity.class);
             intent.putExtra(Constant.KEY_PROJECT_ID, mapNameAndId.get(item));
             this.startActivity(intent);
         });
 
-        // 绑定适配器
+        // 适配器
         recyclerView.setAdapter(adapter);
+
+        // 分割线
+        DividerItemDecoration divider = new DividerItemDecoration(this, DividerItemDecoration.VERTICAL);
+        recyclerView.addItemDecoration(divider);
     }
 
     private void initData() {
@@ -81,6 +87,13 @@ public class ProjectActivity extends BaseActivity {
                 runOnUiThread(() -> {
                     adapter.notifyDataSetChanged();
                 });
+            }
+
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                super.onFailure(call, e);
+                Log.i(TAG, "onFailure: Constant.URL_SERVER_PROJECT_LIST = " + Constant.URL_SERVER_PROJECT_LIST);
+//                ToastUtil.showToast(ProjectActivity.this, "访问服务器失败");
             }
         });
     }
