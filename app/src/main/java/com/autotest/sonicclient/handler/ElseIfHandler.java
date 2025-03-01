@@ -22,13 +22,12 @@ import android.util.Log;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.autotest.sonicclient.enums.ConditionEnum;
-import com.autotest.sonicclient.enums.StepType;
 import com.autotest.sonicclient.interfaces.Assemble;
 import com.autotest.sonicclient.interfaces.HandlerService;
 import com.autotest.sonicclient.interfaces.IStepHandler;
 import com.autotest.sonicclient.model.ResultInfo;
 import com.autotest.sonicclient.utils.LogUtil;
-import com.autotest.sonicclient.utils.SonicRespException;
+import com.autotest.sonicclient.exceptions.SonicRespException;
 
 
 import java.util.List;

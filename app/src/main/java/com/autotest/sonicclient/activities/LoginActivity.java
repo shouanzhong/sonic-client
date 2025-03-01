@@ -18,6 +18,7 @@ import com.autotest.sonicclient.utils.ToastUtil;
 
 import java.io.IOException;
 
+import cn.hutool.crypto.SecureUtil;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -39,30 +40,28 @@ public class LoginActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
         client = new OkHttpClient();
-        // 初始化界面组件
+        // 初始化
         usernameEditText = findViewById(R.id.username);
         passwordEditText = findViewById(R.id.password);
         loginButton = findViewById(R.id.login_button);
         rememberMeCheckBox = findViewById(R.id.remember_me);
 
-        // 检查 SharedPreferences 是否有保存的登录信息
+        // 检查
         SharePreferenceUtil sharePreferenceUtil = SharePreferenceUtil.getInstance(this);
         if (sharePreferenceUtil.getBoolean(Constant.KEY_REMEMBER_ME, false)) {
-            // 如果勾选了“记住密码”，自动填充用户名和密码
+            // 填充
             usernameEditText.setText(sharePreferenceUtil.getString(Constant.KEY_USERNAME, ""));
             passwordEditText.setText(sharePreferenceUtil.getString(Constant.KEY_PASSWORD, ""));
             rememberMeCheckBox.setChecked(true);
         }
 
-        // 设置登录按钮的点击事件
+        // 登录
         loginButton.setOnClickListener(v -> {
-            // 获取输入的用户名和密码
             String username = usernameEditText.getText().toString();
             String password = passwordEditText.getText().toString();
 
-            // 简单的验证：用户名和密码都不能为空
+            // 都不能为空
             if (username.isEmpty() || password.isEmpty()) {
-                // 提示用户输入完整信息
                 ToastUtil.showToast("Please enter both username and password");
             } else {
                 login(username, password);
@@ -81,7 +80,7 @@ public class LoginActivity extends AppCompatActivity {
                 GConfig.SONIC_TOKEN = token;
             });
         } else {
-            // 如果没有勾选“记住密码”，清除保存的用户名和密码
+            // 清除用户名密码
             SharePreferenceUtil.getInstance(this).clear(Constant.KEY_USERNAME, Constant.KEY_PASSWORD, Constant.KEY_SONIC_TOKEN, Constant.KEY_REMEMBER_ME);
 //            editor.putBoolean(Constant.KEY_REMEMBER_ME, false);
         }
@@ -91,7 +90,7 @@ public class LoginActivity extends AppCompatActivity {
         JSONObject json = new JSONObject();
         try {
             json.put(Constant.KEY_USERNAME, username);
-            json.put(Constant.KEY_PASSWORD, password);
+            json.put(Constant.KEY_PASSWORD, SecureUtil.aes(Constant.AES_KEY.getBytes()).encryptHex(password));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -100,7 +99,6 @@ public class LoginActivity extends AppCompatActivity {
         MediaType JSON = MediaType.parse("application/json; charset=utf-8");
         RequestBody body = RequestBody.create(JSON, json.toString());
 
-        // 构造请求
         Request request = new Request.Builder()
                 .url(Constant.URL_SERVER_LOGIN)
                 .post(body)
@@ -111,12 +109,11 @@ public class LoginActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(okhttp3.Call call, IOException e) {
-                // 请求失败，处理错误
-                Log.e(TAG, "Request failed: " + e.getMessage());
+                Log.e(TAG, "Request failed: ", e);
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        ToastUtil.showToast("Login request failed");
+                        ToastUtil.showToast("登录失败，请检查账号和网络");
                     }
                 });
             }
@@ -124,11 +121,9 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onResponse(okhttp3.Call call, Response response) throws IOException {
                 if (response.isSuccessful()) {
-                    // 请求成功，处理返回的数据
                     String responseData = response.body().string();
                     Log.d(TAG, "Response: " + responseData);
 
-                    // 在 UI 线程上更新 UI
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
@@ -136,11 +131,11 @@ public class LoginActivity extends AppCompatActivity {
                                 JSONObject responseJson = JSONObject.parse(responseData);
                                 String dataString = (String) responseJson.getOrDefault("data", "");
                                 if (!dataString.isEmpty()) {
+                                    // 登录成功
                                     ToastUtil.showToast("Login successful");
                                     rememberMe(username, password, dataString);
 
-                                    // 登录成功，跳转到主界面
-                                    Intent intent = new Intent(LoginActivity.this, ProjectActivity.class);
+                                    Intent intent = new Intent(LoginActivity.this, SuitActivity.class);
                                     startActivity(intent);
                                     finish(); // 结束当前 Activity
                                 } else {
@@ -152,7 +147,6 @@ public class LoginActivity extends AppCompatActivity {
                         }
                     });
                 } else {
-                    // 请求失败，处理错误
                     Log.e(TAG, "Request failed: " + response.message());
                     runOnUiThread(new Runnable() {
                         @Override

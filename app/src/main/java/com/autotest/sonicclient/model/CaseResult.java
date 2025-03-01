@@ -6,6 +6,8 @@ import com.alibaba.fastjson2.JSONObject;
 public class CaseResult {
     int cid;
     int rid;
+    int deviceId;
+    String caseName;
     JSONArray steps;
     String logUri;
 
@@ -25,6 +27,22 @@ public class CaseResult {
         this.rid = rid;
     }
 
+    public int getDeviceId() {
+        return deviceId;
+    }
+
+    public void setDeviceId(int deviceId) {
+        this.deviceId = deviceId;
+    }
+
+    public String getCaseName() {
+        return caseName;
+    }
+
+    public void setCaseName(String caseName) {
+        this.caseName = caseName;
+    }
+
     public JSONArray getSteps() {
         return steps;
     }
@@ -41,8 +59,7 @@ public class CaseResult {
         this.logUri = logUri;
     }
 
-    @Override
-    public String toString() {
+    public String toJSONString() {
         return JSONObject.toJSONString(this);
     }
 }

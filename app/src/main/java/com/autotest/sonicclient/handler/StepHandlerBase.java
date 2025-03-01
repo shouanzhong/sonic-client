@@ -2,6 +2,8 @@ package com.autotest.sonicclient.handler;
 
 import android.content.Context;
 
+import com.autotest.sonicclient.services.RunServiceHelper;
+
 import java.lang.ref.WeakReference;
 
 public class StepHandlerBase {
@@ -13,7 +15,7 @@ public class StepHandlerBase {
     }
 
     public boolean isStopped() {
-        return !isRunning;
+        return !isRunning();
     }
 
     public boolean isRunning() {

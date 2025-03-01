@@ -45,7 +45,10 @@ public enum ConditionEnum implements SonicEnum<Integer>, Serializable {
     /**
      * while 条件
      */
-    WHILE(4, "while");
+    WHILE(4, "while"),
+
+    // 只循环不判断
+    LOOP_WITHOUT_CHECK(5, "loop_without_check");
 
     private final Integer value;
 

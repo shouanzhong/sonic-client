@@ -1,10 +1,15 @@
 package com.autotest.sonicclient;
 
+import androidx.annotation.NonNull;
+
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.autotest.sonicclient.utils.Assert;
+import com.autotest.sonicclient.utils.HttpUtil;
 import com.autotest.sonicclient.utils.MinioUtil;
 
+import org.codehaus.groovy.control.CompilerConfiguration;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -15,6 +20,9 @@ import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import cn.hutool.crypto.SecureUtil;
+import groovy.lang.Binding;
+import groovy.lang.GroovyShell;
 import io.minio.BucketExistsArgs;
 import io.minio.DownloadObjectArgs;
 import io.minio.MakeBucketArgs;
@@ -27,6 +35,12 @@ import io.minio.errors.InvalidResponseException;
 import io.minio.errors.MinioException;
 import io.minio.errors.ServerException;
 import io.minio.errors.XmlParserException;
+import io.minio.messages.CsvOutputSerialization;
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 
 /**
@@ -103,7 +117,8 @@ public class ExampleUnitTest {
     public void test_minIOUtil_Upload() throws Exception {
         String fileNameInServer = "upload_test.zip";
         String fileNameForUpload = "E:\\Download\\amis-master\\node_modules\\node-xlsx\\node_modules\\xlsx\\dist\\jszip.js";
-        MinioUtil.builder().setBucketName("com.autotest.sonicclient").build().upload(fileNameForUpload, fileNameInServer);
+        String url = MinioUtil.builder().setBucketName("com.autotest.sonicclient").build().upload(fileNameForUpload, fileNameInServer);
+        System.out.println(url);
     }
 
     @Test
@@ -206,6 +221,73 @@ public class ExampleUnitTest {
             Person o = cases.getObject(i, Person.class);
             o.setName("path2");
             cases.set(i, o);
+        }
+    }
+
+    @Test
+    public void test_aes() {
+        // 加密基于aes算法进行
+        String key = "b2cyqmekle6fcu7m";
+        String password = "wei.xiao";
+// SecureUtil工具使用 hutool包 具体访问 =>
+//        String s = SecureUtil.aes(key.getBytes()).encryptHex(password);
+        String s = SecureUtil.aes(key.getBytes()).encryptHex(password);
+//        https://doc.hutool.cn/pages/SecureUtil/#%E4%BB%8B%E7%BB%8D
+        System.out.println(s);
+    }
+
+    @Test
+    public void test_http() {
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("test1", "test_val");
+        MediaType type = MediaType.parse("application/json; charset=utf-8");
+        RequestBody body = RequestBody.create(type, jsonObject.toString());
+        System.out.println("-----------------");
+        System.out.println(jsonObject);
+
+    }
+
+
+    @Test
+    public void test_assert() {
+        int a = 1;
+        Double b = 2.0;
+        try {
+            Assert.assertEquals(a, b);
+        } catch (AssertionError e) {
+            System.out.println("捕获Assert异常");
+            e.printStackTrace();
+        }
+    }
+
+    @Test
+    public void test_subClassMethod() {
+        A a = new A();
+        a.print("xxxx");
+        ((B)a).printB();
+    }
+
+    @Test
+    public void test_Groovy() {
+        String a = "test var = a";
+        String script = "return a";
+        Binding binding = new Binding();
+        binding.setVariable("a", a); // 绑定变量 a
+        CompilerConfiguration config = new CompilerConfiguration();
+        GroovyShell shell = new GroovyShell(binding, config);
+        Object evaluate = shell.evaluate(script);
+        System.out.println("测试结果: ");
+        System.out.println(evaluate);
+    }
+
+    class A {
+        public void print(String text) {
+            System.out.println("class A: " + text);
+        }
+    }
+    class B extends A {
+        public void printB() {
+            System.out.println("class B: ");
         }
     }
 }

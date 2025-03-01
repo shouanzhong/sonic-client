@@ -2,17 +2,17 @@ package com.autotest.sonicclient.application;
 
 import android.app.Application;
 import android.content.Context;
+import android.content.Intent;
 import android.util.Log;
 
-import com.alibaba.fastjson2.JSONObject;
-import com.autotest.sonicclient.handler.ReportHandler;
-import com.autotest.sonicclient.handler.SuitHandler;
 import com.autotest.sonicclient.interfaces.Assemble;
+import com.autotest.sonicclient.interfaces.BackgroundService;
 import com.autotest.sonicclient.interfaces.CollectionObject;
 import com.autotest.sonicclient.interfaces.HandlerService;
-import com.autotest.sonicclient.interfaces.IStepHandler;
-import com.autotest.sonicclient.model.SuitResult;
+import com.autotest.sonicclient.interfaces.CustomService;
+import com.autotest.sonicclient.services.AdbServiceWrapper;
 import com.autotest.sonicclient.services.InjectorService;
+import com.autotest.sonicclient.utils.CommonUtil;
 import com.autotest.sonicclient.utils.Constant;
 import com.autotest.sonicclient.config.GConfig;
 import com.autotest.sonicclient.utils.PermissionHelper;
@@ -22,8 +22,6 @@ import com.orhanobut.logger.AndroidLogAdapter;
 import com.orhanobut.logger.FormatStrategy;
 import com.orhanobut.logger.Logger;
 
-import java.io.File;
-import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -31,9 +29,6 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashSet;
-import java.util.List;
-
-import dalvik.system.DexFile;
 
 public class ApplicationImpl extends Application {
     private static final String TAG = "ApplicationImpl";
@@ -46,7 +41,6 @@ public class ApplicationImpl extends Application {
     public void onCreate() {
         super.onCreate();
         _instance = this;
-        init();
         // about log
         Logger.addLogAdapter(new AndroidLogAdapter(new FormatStrategy() {
             @Override
@@ -59,9 +53,10 @@ public class ApplicationImpl extends Application {
                 return true;
             }
         });
-        PermissionHelper.openAccessibilityActivityIfNotGranted(this);
         //
         GConfig.SONIC_TOKEN = SharePreferenceUtil.getInstance(this).getString(Constant.KEY_SONIC_TOKEN, "");
+        init();
+//        PermissionHelper.openAccessibilityActivityIfNotGranted(this);
     }
 
     public static ApplicationImpl getInstance() {
@@ -92,7 +87,6 @@ public class ApplicationImpl extends Application {
 
     public void inject() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException, InstantiationException {
         for (Class<?> aClass : classes) {
-
             if (aClass.isAnnotationPresent(HandlerService.class)) {
                 services.add(aClass);
                 Constructor<?> constructor = null;
@@ -100,6 +94,17 @@ public class ApplicationImpl extends Application {
                 constructor = aClass.getDeclaredConstructor(Context.class);
                 instance = constructor.newInstance(getApplicationContext());
                 InjectorService.register(instance);
+            } else if (aClass.isAnnotationPresent(CustomService.class)) {  // 无参构造
+                services.add(aClass);
+                Constructor<?> mConstructor = aClass.getDeclaredConstructor();
+                Object mInstance = mConstructor.newInstance();
+                InjectorService.register(mInstance);
+            } else if (aClass.isAnnotationPresent(BackgroundService.class)) {
+                services.add(aClass);
+                Intent intent = new Intent();
+                intent.setClass(this, aClass);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startService(intent);
             }
         }
     }
@@ -107,7 +112,7 @@ public class ApplicationImpl extends Application {
     public void assemble() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException, InstantiationException {
         for (Class<?> aClass : services) {
 
-            if (aClass.isAnnotationPresent(HandlerService.class)) {
+            if (CommonUtil.isBaseService(aClass)) {
                 for (Field field : aClass.getDeclaredFields()) {
                     if (field.isAnnotationPresent(Assemble.class)) {
                         field.setAccessible(true);

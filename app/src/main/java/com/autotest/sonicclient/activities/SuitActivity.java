@@ -1,24 +1,21 @@
 package com.autotest.sonicclient.activities;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
-import android.util.Log;
 import android.widget.Button;
 import android.widget.ExpandableListView;
-import android.widget.Toast;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.autotest.sonicclient.R;
 import com.autotest.sonicclient.adapters.SuitExpandableListAdapter;
-import com.autotest.sonicclient.handler.CaseHandler;
-import com.autotest.sonicclient.services.RunService;
+import com.autotest.sonicclient.services.RunServiceHelper;
 import com.autotest.sonicclient.utils.Constant;
 import com.autotest.sonicclient.utils.HttpUtil;
-import com.autotest.sonicclient.utils.JsonParser;
 import com.autotest.sonicclient.utils.LogUtil;
 import com.autotest.sonicclient.utils.ToastUtil;
 
@@ -28,9 +25,6 @@ import java.util.HashMap;
 import java.util.List;
 
 import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.Headers;
-import okhttp3.Response;
 
 public class SuitActivity extends BaseActivity {
     private static final String TAG = "SuitActivity";
@@ -40,7 +34,7 @@ public class SuitActivity extends BaseActivity {
     private List<String> listGroup;
     private HashMap<String, List<String>> listItem;
     private String projectID;
-    private final HashMap<String, String> mapNameAndId = new HashMap<>();;
+    private final HashMap<String, String> mapNameAndId = new HashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,57 +47,117 @@ public class SuitActivity extends BaseActivity {
             projectID = "1";  // debug
         }
         LogUtil.d(TAG, "onCreate: projectID = " + projectID);
-        getSupportActionBar().setTitle("TestSuits");
+        getSupportActionBar().setTitle(String.format("TestSuits-[%s]", Build.BOARD));
         //
         expandableListView = findViewById(R.id.expandableListView);
         listGroup = new ArrayList<>();
         listItem = new HashMap<>();
         adapter = new SuitExpandableListAdapter(this, listGroup, listItem);
         expandableListView.setAdapter(adapter);
+
+        expandableListView.setOnGroupExpandListener(new ExpandableListView.OnGroupExpandListener() {
+            @Override
+            public void onGroupExpand(int groupPosition) {
+                // 处理分组项的展开
+                String projectName = listGroup.get(groupPosition);
+                if (listItem.get(projectName).size() > 0) {
+                    return ;
+                }
+                String sid = mapNameAndId.get(projectName);
+                HttpUtil.get(String.format(Constant.URL_SERVER_TESTCASE_LIST, sid), new HttpUtil.Callback<JSONArray>() {
+                    @Override
+                    public void onResponse(Call call, JSONArray cases) throws IOException {
+                        if (cases == null) {
+                            redirectLogin();
+                            return ;
+                        }
+                        ArrayList<String> names = new ArrayList<>();
+                        for (JSONObject jsonObject : cases.toJavaList(JSONObject.class)) {
+                            String name = jsonObject.getString(Constant.KEY_CASE_INFO_CASE_NAME);
+                            names.add(name);
+                        }
+                        listItem.put(projectName, names);
+                        runOnUiThread(() -> {
+                            adapter.notifyDataSetChanged();
+                        });
+                    }
+
+                    @Override
+                    public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                        super.onFailure(call, e);
+                        ToastUtil.showToast(SuitActivity.this, e.getMessage());
+                    }
+                });
+            }
+        });
+
         initListData();
 
-        Button btnShowChecked = findViewById(R.id.btnShowChecked);
+        // 运行
+        Button btnShowChecked = findViewById(R.id.btnRun);
         btnShowChecked.setOnClickListener(v -> {
+            if (RunServiceHelper.isServiceRunning()) {
+                ToastUtil.showToast(SuitActivity.this, "用例执行中, 请先停止");
+                return;
+            }
             List<String> checkedGroups = adapter.getCheckedGroups();
             ToastUtil.showToast(this, "Start: " + checkedGroups);
             for (String projectName : checkedGroups) {
                 String sid = mapNameAndId.get(projectName);
                 LogUtil.d(TAG, "onClick: suitId: " + sid);
-                HttpUtil.get(String.format(Constant.URL_SERVER_TESTCASE_LIST, sid), new HttpUtil.Callback<JSONObject>() {
+                HttpUtil.get(String.format(Constant.URL_SERVER_TESTCASE_LIST, sid), new HttpUtil.Callback<JSONArray>() {
                     @Override
-                    public void onResponse(Call call, JSONObject item) throws IOException {
-                        item.put("sid", Integer.parseInt(sid));
-                        RunService.startActionRunSuit(SuitActivity.this, item);
+                    public void onResponse(Call call, JSONArray steps) throws IOException {
+                        if (steps == null) {
+                            redirectLogin();
+                            return ;
+                        }
+                        JSONObject jsonObject = new JSONObject();
+                        jsonObject.put(Constant.KEY_SUIT_INFO_SID, Integer.parseInt(sid));
+                        jsonObject.put(Constant.KEY_SUIT_INFO_CASES, steps);
+
+                        RunServiceHelper.startActionRunSuit(SuitActivity.this, jsonObject);
+//                        finish();
+                    }
+
+                    @Override
+                    public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                        super.onFailure(call, e);
+                        ToastUtil.showToast(SuitActivity.this, e.getMessage());
                     }
                 });
             }
-            
-//            JSONObject jsonObject = JsonParser.readJsonFromAssets(this, "suitCaseTemp.json");
-
         });
+
+        // 刷新
+        SwipeRefreshLayout swipeRefreshLayout = findViewById(R.id.swipe_refresh_layout);
+        swipeRefreshLayout.setOnRefreshListener(() -> {
+            // 加载
+            initListData();
+            swipeRefreshLayout.setRefreshing(false);
+        });
+
     }
 
     private void initListData() {
 
-        HttpUtil.get(String.format(Constant.URL_SERVER_TESTSUITE_LIST, projectID),
-                new HttpUtil.Callback<JSONObject>() {
+        HttpUtil.get(Constant.URL_SERVER_TESTSUITE_LIST,
+                new HttpUtil.Callback<JSONArray>() {
             @Override
-            public void onResponse(Call call, JSONObject item) {
-                LogUtil.d(TAG, "onResponse: " + item);
-                JSONArray content = item.getJSONArray("content");
-                for (Object o : content) {
+            public void onResponse(Call call, JSONArray suits) {
+                LogUtil.d(TAG, "onResponse: " + suits);
+                if (suits.size() == 0) {
+                    ToastUtil.showToast(SuitActivity.this, String.format("%s 无用例", Build.MODEL), true);
+                }
+                mapNameAndId.clear();
+                listGroup.clear();
+                for (Object o : suits) {
                     JSONObject jsonObject = (JSONObject) o;
                     String id = jsonObject.getString("id");
                     String projectName = jsonObject.getString("name");
-                    List<JSONObject> testCases = jsonObject.getJSONArray("testCases").toJavaList(JSONObject.class);
                     mapNameAndId.put(projectName, id);
                     listGroup.add(projectName);
-                    ArrayList<String> caseNameList = new ArrayList<>();
-                    for (JSONObject testCase : testCases) {
-                        String tName = testCase.getString("name");
-                        caseNameList.add(tName);
-                    }
-                    listItem.put(projectName, caseNameList);
+                    listItem.put(projectName, new ArrayList<String>());
                     LogUtil.d(TAG, String.format("onResponse: type = %s, O = %s", o.getClass(), o));
                 }
                 LogUtil.d(TAG, listItem.toString());
@@ -115,6 +169,7 @@ public class SuitActivity extends BaseActivity {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 super.onFailure(call, e);
+                ToastUtil.showToast(SuitActivity.this, e.getMessage(), true);
                 redirectLogin();
             }
         });

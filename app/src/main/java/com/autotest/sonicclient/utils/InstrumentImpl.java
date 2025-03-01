@@ -33,7 +33,9 @@ public class InstrumentImpl extends Instrumentation {
         clickPos(point.x, point.y);
     }
 
-    public void pressKeyCode(int keycode) {
-        sendKeyDownUpSync(keycode);
+    public void pressKeyCode(int keycode) throws InterruptedException {
+        Thread thread = new Thread(() -> sendKeyDownUpSync(keycode));
+        thread.start();
+        thread.join(1000);
     }
 }

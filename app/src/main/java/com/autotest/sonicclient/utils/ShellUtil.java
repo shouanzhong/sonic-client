@@ -12,9 +12,10 @@ public class ShellUtil {
     private static final String TAG = "ShellUtil";
     private static MyThread myThread;
     private static String TERMINATOR = ">";
+    private static int CMD_EXEC_TIMEOUT = 2000;
 
     public static String execCmd(String cmd) {
-        return execCmd(cmd, 2000);
+        return execCmd(cmd, CMD_EXEC_TIMEOUT);
     }
 
     public static String execCmd(String cmd, int timeout) {
@@ -30,7 +31,7 @@ public class ShellUtil {
 
             @Override
             public void onErrorStreamChanged(String line) {
-                Log.d(TAG, "onErrorStreamChanged: " + line);
+                Log.e(TAG, "onErrorStreamChanged: " + line);
                 err.append(line);
                 err.append("\n");
             }

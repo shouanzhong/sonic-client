@@ -48,6 +48,10 @@ public class StepHandlerWrapper extends StepHandlerBase {
     }
 
     public ResultInfo runStep(JSONObject stepJSON, ResultInfo resultInfo) throws Throwable {
+        resultInfo.clearStep();
+        if (isStopped()) {
+            return stopStep(resultInfo);
+        }
         JSONObject step = stepJSON.getJSONObject(Constant.KEY_STEP_INFO_STEP);
         LogUtil.d(TAG, "StepHandlerWrapper runStep: %s", step.toJSONString());
         // 兼容childSteps
@@ -57,6 +61,14 @@ public class StepHandlerWrapper extends StepHandlerBase {
         Integer conditionType = step.getInteger(Constant.KEY_STEP_INFO_CONDITION_TYPE);
         getSupportedCondition(SonicEnum.valueToEnum(ConditionEnum.class, conditionType))
                 .runStep(stepJSON, resultInfo);
+        return resultInfo;
+    }
+
+    @NonNull
+    private ResultInfo stopStep(ResultInfo resultInfo) {
+        resultInfo.setDetail("App用例执行被停止");
+        resultInfo.setError(true);
+        resultInfo.collect();
         return resultInfo;
     }
 

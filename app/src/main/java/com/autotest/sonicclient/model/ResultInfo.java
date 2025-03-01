@@ -2,11 +2,13 @@ package com.autotest.sonicclient.model;
 
 
 import android.os.Build;
+import android.text.TextUtils;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.autotest.sonicclient.application.ApplicationImpl;
 import com.autotest.sonicclient.enums.StepType;
+import com.autotest.sonicclient.utils.Constant;
 import com.autotest.sonicclient.utils.DeviceUtil;
 
 /**
@@ -14,7 +16,7 @@ import com.autotest.sonicclient.utils.DeviceUtil;
  */
 public class ResultInfo {
     private String stepDes;
-    private String detail;
+    private String detail = "";
     private Throwable e;
     private int caseId;
     private int resultId;
@@ -22,7 +24,7 @@ public class ResultInfo {
     private JSONObject packInfo;
     private final JSONArray stepResultList = new JSONArray();
     private String logPath;
-    private final String minioBucket = ApplicationImpl.getInstance().getPackageName();
+    private boolean haveError = false;  // case 级别标识
 
     public String getStepDes() {
         return stepDes;
@@ -72,11 +74,28 @@ public class ResultInfo {
         return stepResultList;
     }
 
+    public String getLogPath() {
+        return logPath;
+    }
+
+    public void setLogPath(String logPath) {
+        this.logPath = logPath;
+    }
+
+    public boolean haveError() {
+        return haveError;
+    }
+
+    public void setError(boolean haveError) {
+        this.haveError = haveError;
+    }
+
     public void reset() {
         clearStep();
         this.caseId = -1;
         this.resultId = -1;
         this.packInfo.clear();
+        this.haveError = false;
     }
 
     public void clearStep() {
@@ -92,15 +111,15 @@ public class ResultInfo {
 
     public JSONObject pack(int status, String des, String detail) {
         packInfo = new JSONObject();
-        packInfo.put("msg", "step");
-        packInfo.put("des", des);
-        packInfo.put("status", status);
-        packInfo.put("log", detail);
-        packInfo.put("cid", caseId);
-        packInfo.put("rid", resultId);
-        packInfo.put("udId", Build.getSerial());
-        packInfo.put("pic", pic);
-        packInfo.put("logcatPath", logPath);
+        packInfo.put(Constant.KEY_STEP_RESULT_MSG, "step");
+        packInfo.put(Constant.KEY_STEP_RESULT_DES, des);
+        packInfo.put(Constant.KEY_STEP_RESULT_STATUS, status);
+        packInfo.put(Constant.KEY_STEP_RESULT_LOG_DETAIL, String.format("%s %s", des, detail));
+        packInfo.put(Constant.KEY_STEP_RESULT_CID, caseId);
+        packInfo.put(Constant.KEY_CASE_INFO_RID, resultId);
+        packInfo.put(Constant.KEY_STEP_RESULT_UDID, Build.getSerial());
+        packInfo.put(Constant.KEY_STEP_RESULT_PIC, pic);
+        packInfo.put(Constant.KEY_STEP_RESULT_LOGCAT, logPath);
         return packInfo;
     }
 
@@ -122,11 +141,13 @@ public class ResultInfo {
 
     public JSONObject packWarning() {
         this.pic = DeviceUtil.takeShot(caseId + "");
-        return pack(StepType.WARN, stepDes + "异常！");
+        haveError = true;
+        return pack(StepType.WARN, stepDes + " 警告！");
     }
 
     public JSONObject packError() {
         this.pic = DeviceUtil.takeShot(caseId + "");
+        haveError = true;
         return pack(StepType.ERROR, stepDes + "异常！", detail);
     }
 

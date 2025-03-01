@@ -56,7 +56,7 @@ public class WhileHandler extends StepHandlerBase implements IStepHandler {
         if (isStopped()) {
             return null;
         }
-        resultInfo = new ResultInfo();
+//        resultInfo = new ResultInfo();
 
         // 取出 while 下的步骤集合
         JSONObject conditionStep = stepJSON.getJSONObject("step");

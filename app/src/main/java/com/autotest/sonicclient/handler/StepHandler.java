@@ -1,7 +1,10 @@
 package com.autotest.sonicclient.handler;
 
 import android.content.Context;
+import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
+import android.graphics.Point;
 import android.os.SystemClock;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -14,29 +17,42 @@ import com.autotest.sonicclient.enums.ConditionEnum;
 import com.autotest.sonicclient.enums.ErrorType;
 import com.autotest.sonicclient.enums.SonicEnum;
 import com.autotest.sonicclient.enums.StepType;
+import com.autotest.sonicclient.interfaces.Assemble;
 import com.autotest.sonicclient.interfaces.HandlerService;
 import com.autotest.sonicclient.interfaces.IStepHandler;
 import com.autotest.sonicclient.model.By;
 import com.autotest.sonicclient.model.ResultInfo;
-import com.autotest.sonicclient.services.TService;
+import com.autotest.sonicclient.nodes.AccessibilityNodeInfoImpl;
+import com.autotest.sonicclient.services.TServiceWrapper;
+import com.autotest.sonicclient.utils.Assert;
 import com.autotest.sonicclient.utils.Constant;
+import com.autotest.sonicclient.utils.DeviceUtil;
+import com.autotest.sonicclient.utils.DownloadTool;
 import com.autotest.sonicclient.utils.GConfigParams;
 import com.autotest.sonicclient.utils.InstrumentImpl;
 import com.autotest.sonicclient.utils.JsonParser;
 import com.autotest.sonicclient.utils.LogUtil;
+import com.autotest.sonicclient.utils.MinioUtil;
 import com.autotest.sonicclient.utils.PermissionHelper;
 import com.autotest.sonicclient.utils.ShellUtil;
+import com.autotest.sonicclient.exceptions.SonicRespException;
 import com.autotest.sonicclient.utils.ToastUtil;
 
-import java.lang.ref.WeakReference;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+
 @HandlerService
 public class StepHandler extends StepHandlerBase implements IStepHandler {
     private static final String TAG = "StepHandler";
-    Context handleContext;
     private final JSONObject globalParams = new JSONObject();
 
     private ResultInfo resultInfo = new ResultInfo();
+    @Assemble
+    StepHandlerWrapper stepHandlerWrapper;
+    @Assemble
+    TServiceWrapper tService;
 
     public StepHandler(Context context) {
         super(context);
@@ -61,7 +77,7 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
         } catch (Exception e) {
             LogUtil.e(TAG, String.format("runStep: [%s] 执行失败", stepType), e);
             resultInfo.setE(e);
-            resultInfo.setStepDes(stepType + "handle error!!");
+            resultInfo.setStepDes(stepType + " handle error!!");
             resultInfo.packError();
         } finally {
             resultInfo.collect();
@@ -74,11 +90,6 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
         return ConditionEnum.NONE;
     }
 
-    @Override
-    public JSONObject handlerPublicStep(JSONObject step) {
-        notImplement();
-        return IStepHandler.super.handlerPublicStep(step);
-    }
 
     private void handleStep(JSONObject stepJSON) throws Throwable {
         LogUtil.d(TAG, "handleStep: step: " + stepJSON);
@@ -133,6 +144,9 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
                 break;
             case "click":
                 click(eleName, eleType, eleValue);
+                break;
+            case "zoom":
+                zoom(eleList);
                 break;
             case "getTitle":
                 getTitle(step.getString("content"));  // 未实现
@@ -207,7 +221,7 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
                 checkImage(eleName, eleValue, step.getDouble("content"));
                 break;
             case "stepScreen":
-                stepScreen(handleContext);
+                stepScreen();
                 break;
             case "openApp":
                 openApp(step.getString("text"));
@@ -227,10 +241,10 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
                 rotateDevice(step.getString(Constant.KEY_STEP_INFO_TYPE));
                 break;
             case "lock":
-                lock(handleContext);
+                lock();
                 break;
             case "unLock":
-                unLock(handleContext);
+                unLock();
                 break;
             case "airPlaneMode":
                 airPlaneMode(step.getBoolean("content"));
@@ -265,7 +279,7 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
                 runMonkey(step.getJSONObject("content"), step.getJSONArray("text").toJavaList(JSONObject.class));
                 break;
             case "publicStep":
-                publicStep(step.getString("content"), step.getJSONArray("pubSteps"));
+                publicStep(step.getString("content"), stepJSON.getJSONArray("pubSteps"));
                 break;
             case "setDefaultFindWebViewElementInterval":
                 setDefaultFindWebViewElementInterval(step.getInteger("content"), step.getInteger("text"));
@@ -292,10 +306,10 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
                 webViewClick(eleName, eleType, eleValue);
                 break;
             case "webViewRefresh":
-                webViewRefresh(handleContext);
+                webViewRefresh();
                 break;
             case "webViewBack":
-                webViewBack(handleContext);
+                webViewBack();
                 break;
             case "getWebViewTextValue":
                 globalParams.put(step.getString("content"), getWebViewText(eleName, eleType, eleValue));
@@ -343,13 +357,13 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
                 globalParams.put(step.getString("content"), getPocoText(eleName, eleType, eleValue));
                 break;
             case "freezeSource":
-                freezeSource(handleContext);
+                freezeSource();
                 break;
             case "thawSource":
-                thawSource(handleContext);
+                thawSource();
                 break;
             case "closePocoDriver":
-                closePocoDriver(handleContext);
+                closePocoDriver();
                 break;
             case "switchWindowMode":
                 switchWindowMode(step.getBoolean("content"));
@@ -361,7 +375,7 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
                 switchVisibleMode(step.getBoolean("content"));
                 break;
             case "closeKeyboard":
-                closeKeyboard(handleContext);
+                closeKeyboard();
                 break;
             case "iteratorPocoElement":
                 iteratorPocoElement(eleName, eleType, eleValue);
@@ -370,7 +384,7 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
                 iteratorAndroidElement(eleName, eleType, eleValue);
                 break;
             case "getClipperByKeyboard":
-                globalParams.put(step.getString("content"), getClipperByKeyboard(handleContext));
+                globalParams.put(step.getString("content"), getClipperByKeyboard());
                 break;
             case "setClipperByKeyboard":
                 setClipperByKeyboard(step.getString("content"));
@@ -399,6 +413,31 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
         switchType(step);
     }
 
+    private void zoom(JSONArray elements) {
+        resultInfo.setStepDes("双指缩放");
+
+        ArrayList<Point> points = new ArrayList<>();
+        try {
+            // 要保证有4个坐标点
+            if (elements != null && elements.size() == 4) {
+                List<JSONObject> jsonObjects = elements.toJavaList(JSONObject.class);
+                for (JSONObject jsonObject : jsonObjects) {
+                    String eleValue = jsonObject.getString("eleValue");
+                    int[] coords = Arrays.stream(eleValue.split(","))
+                            .mapToInt(Integer::parseInt)
+                            .toArray();
+                    points.add(new Point(coords[0], coords[1]));
+                }
+                tService.zoomIn(points);
+
+            } else {
+                throw new Exception("没有足够的坐标点");
+            }
+        } catch (Exception e) {
+            resultInfo.setE(e);
+        }
+    }
+
     private void notImplement() {
         ToastUtil.showToast("not implement");
         try {
@@ -414,7 +453,26 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
     }
 
     private void rotateDevice(String stepType) {
-        notImplement();
+        try {
+            Context context = contextWeakReference.get();
+            resultInfo.setDetail("");
+            switch (stepType) {
+                case "screenSub":
+                    resultInfo.setStepDes("左转屏幕");
+                    DeviceUtil.Rotation.setLeft(context);
+                    break;
+                case "screenAdd":
+                    resultInfo.setStepDes("右转屏幕");
+                    DeviceUtil.Rotation.setRight(context);
+                    break;
+                case "screenAbort":
+                    resultInfo.setStepDes("关闭自动旋转");
+                    DeviceUtil.Rotation.disable(context);
+                    break;
+            }
+        } catch (Exception e) {
+            resultInfo.setE(e);
+        }
     }
 
     private void getElementTextAndAssertWithOperation(String eleName, String eleType, String eleValue, String content, String text, int i) {
@@ -446,10 +504,6 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
                     break;
                 case SHUTDOWN:
                     resultInfo.packError();
-//                    log.sendStepLog(StepType.ERROR, stepDes + "异常！", detail);
-//                    setResultDetailStatus(ResultDetailStatus.FAIL);
-//                    errorScreen();
-//                    exceptionLog(e);
                     throw e;
             }
         } else if (!"IGNORE".equals(stepDes)) {
@@ -475,7 +529,7 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
         notImplement();
     }
 
-    private Object getClipperByKeyboard(Context handleContext) {
+    private Object getClipperByKeyboard() {
         notImplement();
         return null;
     }
@@ -488,7 +542,7 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
         notImplement();
     }
 
-    private void closeKeyboard(Context handleContext) {
+    private void closeKeyboard() {
         notImplement();
     }
 
@@ -504,15 +558,15 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
         notImplement();
     }
 
-    private void closePocoDriver(Context handleContext) {
+    private void closePocoDriver() {
         notImplement();
     }
 
-    private void thawSource(Context handleContext) {
+    private void thawSource() {
         notImplement();
     }
 
-    private void freezeSource(Context handleContext) {
+    private void freezeSource() {
         notImplement();
     }
 
@@ -560,8 +614,10 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
         notImplement();
     }
 
-    private void setFindElementInterval(Integer content, Integer text) {
-        notImplement();
+    private void setFindElementInterval(Integer retry, Integer interval) {
+        // appium 框架参数值，无对应参数可配置
+        resultInfo.setStepDes("Set Global Find Android Element Interval");
+        resultInfo.setDetail(String.format("Retry count: %d, retry interval: %d ms", retry, interval));
     }
 
     private Object getWebViewText(String eleName, String eleType, String eleValue) {
@@ -581,11 +637,11 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
         return null;
     }
 
-    private void webViewBack(Context handleContext) {
+    private void webViewBack() {
         notImplement();
     }
 
-    private void webViewRefresh(Context handleContext) {
+    private void webViewRefresh() {
         notImplement();
     }
 
@@ -613,8 +669,29 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
         notImplement();
     }
 
-    private void publicStep(String content, JSONArray pubSteps) {
-        notImplement();
+    private void publicStep(String name, JSONArray publicSteps) throws SonicRespException {
+        LogUtil.i(TAG, "公共步骤「" + name + "」开始执行", "");
+//        isLockStatus = true;
+        List<JSONObject> stepArray = publicSteps.toJavaList(JSONObject.class);
+        for (JSONObject stepDetail : stepArray) {
+            try {
+                resultInfo.setStepDes("IGNORE");
+                resultInfo.setStepDes("执行公共步骤 " + name);
+                stepHandlerWrapper.runStep(stepDetail, resultInfo);
+            } catch (Throwable e) {
+                LogUtil.e(TAG, resultInfo.getStepDes(), e);
+                resultInfo.setE(e);
+                resultInfo.packError();
+                resultInfo.collect();
+                break;
+            }
+        }
+        resultInfo.setStepDes("IGNORE");
+        if (resultInfo.getE() != null && (resultInfo.getE().getMessage() != null) && (!resultInfo.getE().getMessage().startsWith("IGNORE:"))) {
+            resultInfo.setStepDes("执行公共步骤 " + name);
+            resultInfo.setE(new SonicRespException("Exception thrown during child step running."));
+        }
+        LogUtil.i(TAG, "公共步骤「" + name + "」执行完毕", "");
     }
 
     private void setDefaultFindWebViewElementInterval(Integer content, Integer text) {
@@ -626,8 +703,9 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
     }
 
     private void runMonkey(JSONObject content, List<JSONObject> text) {
-        resultInfo.setStepDes("运行随机事件测试完毕");
+        resultInfo.setStepDes("运行随机事件测试");
         resultInfo.setDetail("");
+        resultInfo.setE(new Exception("App 端不支持 Monkey 测试"));
 //        String packageName = content.getString("packageName");
 //        int pctNum = content.getInteger("pctNum");
 //        if (!ShellUtil.execCmd("pm list package").contains(packageName)) {
@@ -721,7 +799,7 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
 //                            if (random >= finalSystemEvent && random < (finalSystemEvent + finalTapEvent)) {
 //                                int x = new Random().nextInt(width - 60) + 60;
 //                                int y = new Random().nextInt(height - 60) + 60;
-//                                TService.getInstance().clickPos(x, y);
+//                                tService.clickPos(x, y);
 //                            }
 //                            if (random >= (finalSystemEvent + finalTapEvent) && random < (finalSystemEvent + finalTapEvent + finalLongPressEvent)) {
 //                                int x = new Random().nextInt(width - 60) + 60;
@@ -805,7 +883,7 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
 //                            return;
 //                        }
 //                        Set<String> blackList = new HashSet<>();
-//                        for (com.alibaba.fastjson.JSONObject activities : text) {
+//                        for (JSONObject activities : text) {
 //                            blackList.add(activities.getString("name"));
 //                        }
 //                        while (!randomThread.isDone()) {
@@ -863,61 +941,166 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
 //        }
     }
 
-    private void asserts(String actual, String expect, String stepType) {
-        notImplement();
+    private void asserts( String actual, String expect, String type) {
+        resultInfo.setDetail("真实值： " + actual + " 期望值： " + expect);
+        resultInfo.setStepDes("");
+        try {
+            switch (type) {
+                case "assertEquals":
+                    resultInfo.setStepDes("断言验证(相等)");
+                    Assert.assertEquals(actual, expect);
+                    break;
+                case "assertTrue":
+                    resultInfo.setStepDes("断言验证(包含)");
+                    Assert.assertTrue(actual.contains(expect));
+                    break;
+                case "assertNotTrue":
+                    resultInfo.setStepDes("断言验证(不包含)");
+                    Assert.assertFalse(actual.contains(expect));
+                    break;
+            }
+        } catch (AssertionError e) {
+            resultInfo.setE(e);
+        }
     }
 
     private void keyCode(String keyCode) {
+        keyCode(AndroidKey.valueOf(keyCode).getCode());
+    }
+
+    private void keyCode(Integer keyCode) {
         resultInfo.setStepDes("按系统按键" + keyCode + "键");
         resultInfo.setDetail("");
         Log.i(TAG, String.format("keyCode: press keyCode: [%s]", keyCode));
-        new InstrumentImpl().pressKeyCode(AndroidKey.valueOf(keyCode).getCode());
+        try {
+            InstrumentImpl.getInstance().pressKeyCode(keyCode);
+        } catch (InterruptedException e) {
+            resultInfo.setE(e);
+            e.printStackTrace();
+        }
     }
 
-    private void keyCode(Integer content) {
-        notImplement();
+    private void locationMode(Boolean enable) {
+        resultInfo.setStepDes("切换位置服务");
+        resultInfo.setDetail("");
+        try {
+            DeviceUtil.setLocationState(enable);
+        } catch (Exception e) {
+            resultInfo.setE(e);
+        }
     }
 
-    private void locationMode(Boolean content) {
-        notImplement();
+    private void wifiMode(Boolean enable) {
+        resultInfo.setStepDes("开关WIFI");
+        resultInfo.setDetail(enable ? "打开" : "关闭");
+        try {
+            DeviceUtil.setWifiState(enable);
+        } catch (Exception e) {
+            resultInfo.setE(e);
+        }
     }
 
-    private void wifiMode(Boolean content) {
-        notImplement();
+    private void airPlaneMode(Boolean enable) {
+        resultInfo.setStepDes("切换飞行模式");
+        resultInfo.setDetail(enable ? "打开" : "关闭");
+        try {
+            DeviceUtil.setAirPlaneMode(enable);
+        } catch (Exception e) {
+            resultInfo.setE(e);
+        }
     }
 
-    private void airPlaneMode(Boolean content) {
-        notImplement();
+    private void unLock() {
+        resultInfo.setStepDes("点击Power键");
+        resultInfo.setDetail("");
+        try {
+            new InstrumentImpl().pressKeyCode(KeyEvent.KEYCODE_POWER);
+        } catch (Exception e) {
+            resultInfo.setE(e);
+        }
     }
 
-    private void unLock(Context handleContext) {
-        notImplement();
-    }
-
-    private void lock(Context handleContext) {
+    private void lock() {
         resultInfo.setStepDes("锁定屏幕");
         resultInfo.setDetail("");
-        InstrumentImpl.getInstance().pressKeyCode(KeyEvent.KEYCODE_POWER);
+        try {
+            InstrumentImpl.getInstance().pressKeyCode(KeyEvent.KEYCODE_POWER);
+        } catch (InterruptedException e) {
+            resultInfo.setE(e);
+            e.printStackTrace();
+        }
     }
 
-    private void uninstall(String text) {
-        notImplement();
+    private void uninstall(String pkg) {
+        resultInfo.setStepDes("卸载应用");
+        pkg = TextHandler.replaceTrans(pkg, globalParams);
+        resultInfo.setDetail("App包名： " + pkg);
+        try {
+            DeviceUtil.uninstallPkg(contextWeakReference.get(), pkg);
+        } catch (Exception e) {
+            resultInfo.setE(e);
+        }
     }
 
-    private void install(String text) {
-        notImplement();
+    private void install(String path) {
+        resultInfo.setStepDes("安装应用");
+        path = TextHandler.replaceTrans(path, globalParams);
+        resultInfo.setDetail("App安装路径： " + path);
+        File localFile = new File(path);
+        try {
+            if (path.contains("http")) {
+                localFile = DownloadTool.download(path);
+            }
+            Context context = contextWeakReference.get();
+            ToastUtil.showToast(context, "开始安装App，请稍后...");
+            DeviceUtil.installApk(context, localFile);
+        } catch (Exception e) {
+            resultInfo.setE(e);
+        }
     }
 
-    private void terminate(String text) {
-        notImplement();
+    private void terminate(String packageName) {
+        resultInfo.setStepDes("终止应用");
+        packageName = TextHandler.replaceTrans(packageName, globalParams);
+        resultInfo.setDetail("应用包名： " + packageName);
+        try {
+            DeviceUtil.forceStop(packageName);
+        } catch (Exception e) {
+            resultInfo.setE(e);
+        }
     }
 
-    private void openApp(String text) {
-        notImplement();
+    private void openApp(String appPackage) {
+        resultInfo.setStepDes("打开应用");
+        appPackage = TextHandler.replaceTrans(appPackage, globalParams);
+        resultInfo.setDetail("App包名： " + appPackage);
+        try {
+            Context context = contextWeakReference.get();
+            Intent intent = context.getPackageManager().getLaunchIntentForPackage("com.mediatek.camera");
+            if (intent != null) {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.getApplicationContext().startActivity(intent);
+            } else {
+                Log.e(TAG, "onButtonClick: 未找到应用 ");
+            }
+//            targetPackage = appPackage;
+        } catch (Exception e) {
+            resultInfo.setE(e);
+        }
     }
 
-    private void stepScreen(Context handleContext) {
-        notImplement();
+    private String stepScreen() {
+        resultInfo.setStepDes("获取截图");
+        resultInfo.setDetail("");
+        String url = "";
+        String filePath = DeviceUtil.takeShot("test-output");
+        try {
+            url = MinioUtil.builder().build().upload(filePath, new File(filePath).getName());
+            resultInfo.setDetail(url);
+        } catch (Exception e) {
+            resultInfo.setE(e);
+        }
+        return url;
     }
 
     private void checkImage(String eleName, String eleValue, Double content) {
@@ -938,8 +1121,17 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
         }
     }
 
-    private void longPressPoint(String eleName, String eleValue, Integer content) {
-        notImplement();
+    private void longPressPoint(String des, String xy, int time) {
+        double x = Double.parseDouble(xy.substring(0, xy.indexOf(",")));
+        double y = Double.parseDouble(xy.substring(xy.indexOf(",") + 1));
+        int[] point = computedPoint(x, y);
+        resultInfo.setStepDes("长按" + des);
+        resultInfo.setDetail("长按坐标" + time + "毫秒 (" + point[0] + "," + point[1] + ")");
+        try {
+            ShellUtil.execCmd(String.format("input swipe %d %d %d %d %d", point[0], point[1], point[0], point[1], time));
+        } catch (Exception e) {
+            resultInfo.setE(e);
+        }
     }
 
     private void tap(String eleName, String eleValue) {
@@ -949,7 +1141,7 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
         LogUtil.i(TAG, String.format("tap: eleName: [%s], pos: [%s]", eleName, eleValue));
         String[] split = eleValue.split(",");
         try {
-            TService.getInstance().clickPos(Float.parseFloat(split[0]), Float.parseFloat(split[1]));
+            tService.clickPos(Float.parseFloat(split[0]), Float.parseFloat(split[1]));
         } catch (Exception e) {
             resultInfo.setE(e);
         }
@@ -975,20 +1167,64 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
         notImplement();
     }
 
-    private void swipePoint(String eleName, String eleValue, String eleName1, String eleValue1) {
-        notImplement();
+    private void swipePoint(String des1, String xy1, String des2, String xy2) {
+        double x1 = Double.parseDouble(xy1.substring(0, xy1.indexOf(",")));
+        double y1 = Double.parseDouble(xy1.substring(xy1.indexOf(",") + 1));
+        int[] point1 = computedPoint(x1, y1);
+        double x2 = Double.parseDouble(xy2.substring(0, xy2.indexOf(",")));
+        double y2 = Double.parseDouble(xy2.substring(xy2.indexOf(",") + 1));
+        int[] point2 = computedPoint(x2, y2);
+        resultInfo.setStepDes("滑动拖拽" + des1 + "到" + des2);
+        resultInfo.setDetail("拖动坐标(" + point1[0] + "," + point1[1] + ")到(" + point2[0] + "," + point2[1] + ")");
+        try {
+            ShellUtil.execCmd(String.format("input swipe %d %d %d %d %d", point1[0], point1[1], point2[0], point2[1], 300));
+        } catch (Exception e) {
+            resultInfo.setE(e);
+        }
     }
 
-    private void longPress(String eleName, String eleType, String eleValue, Integer content) {
-        notImplement();
+    private int[] computedPoint(double x, double y) {
+        if (x <= 1 && y <= 1) {
+            int screenOrientation = DeviceUtil.getScreenOrientation(contextWeakReference.get());
+            Point screenSize = DeviceUtil.getScreenSize();
+            // 竖屏
+            if (screenOrientation == ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT) {
+                x = screenSize.x * x;
+                y = screenSize.y * y;
+            } else {
+                x = screenSize.y * x;
+                y = screenSize.x * y;
+            }
+        }
+        return new int[]{(int) x, (int) y};
+    }
+
+
+    private void longPress(String des, String selector, String pathValue, int time) {
+        resultInfo.setStepDes("长按" + des);
+        resultInfo.setDetail("长按控件元素" + time + "毫秒 ");
+        try {
+            AccessibilityNodeInfoImpl ele = (AccessibilityNodeInfoImpl) findEle(selector, pathValue);
+            Point point = ele.getVisibleCenter();
+            ShellUtil.execCmd(String.format("input swipe %d %d %d %d %d",
+                    point.x, point.y, point.x, point.y, time));
+        } catch (Exception e) {
+            resultInfo.setE(e);
+        }
     }
 
     private void isExistEleNum(String eleName, String eleType, String eleValue, String content, Integer text, int i) {
         notImplement();
     }
 
-    private void clear(String eleName, String eleType, String eleValue) {
-        notImplement();
+    private void clear(String des, String selector, String pathValue) {
+        resultInfo.setStepDes("清空" + des);
+        resultInfo.setDetail("清空" + selector + ": " + pathValue);
+        try {
+            new AccessibilityNodeInfoImpl(findEle(selector, pathValue)).setInputFieldText("");
+        } catch (Exception e) {
+            resultInfo.setE(e);
+        }
     }
 
     private void scrollToEle(String eleName, String eleType, String eleValue, Integer content, String text) {
@@ -1014,14 +1250,15 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
         eleValue = TextHandler.replaceTrans(eleValue, globalParams);
         switch (eleType) {
             case "androidIterator" : notImplement(); break;
-            case "id" : return TService.getInstance().findNode(By.res(eleValue));
-            case "accessibilityId" : return TService.getInstance().findNode(By.desc(eleValue));
-            case "xpath" : return TService.getInstance().findNode(By.xpath(eleValue));
-            case "className" : return TService.getInstance().findNode(By.className(eleValue));
-            case "androidUIAutomator" : notImplement();break;
+            case "id" : return tService.findNode(By.res(eleValue));
+            case "accessibilityId" : return tService.findNode(By.desc(eleValue));
+            case "xpath" : return tService.findNode(By.xpath(eleValue));
+            case "className" : return tService.findNode(By.className(eleValue));
+            case "androidUIAutomator" : notImplement(); break;
             default :
-                LogUtil.e(TAG, "findEle: " + "查找控件元素失败" + "这个控件元素类型: " + eleType + " 不存在!!!");
-//                    log.sendStepLog(StepType.ERROR, "查找控件元素失败", "这个控件元素类型: " + selector + " 不存在!!!");
+                String message = "findEle: " + "查找控件元素失败" + "这个控件元素类型: " + eleType + " 不存在!!!";
+                LogUtil.e(TAG, message);
+                throw new Exception(message);
         }
         return null;
     }
@@ -1030,10 +1267,10 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
         eleValue = TextHandler.replaceTrans(eleValue, globalParams);
         switch (eleType) {
             case "androidIterator" : notImplement(); break;
-            case "id" : return TService.getInstance().getXml().contains(String.format("id=\"%s\"", eleValue));
-            case "accessibilityId" : return TService.getInstance().getXml().contains(String.format("desc=\"%s\"", eleValue));
-            case "xpath" : return TService.getInstance().findNode(By.xpath(eleValue)) != null;
-            case "className" : return TService.getInstance().getXml().contains(String.format("class=\"%s\"", eleValue));
+            case "id" : return tService.getXml().contains(String.format("id=\"%s\"", eleValue));
+            case "accessibilityId" : return tService.getXml().contains(String.format("desc=\"%s\"", eleValue));
+            case "xpath" : return tService.findNode(By.xpath(eleValue)) != null;
+            case "className" : return tService.getXml().contains(String.format("class=\"%s\"", eleValue));
             case "androidUIAutomator" : notImplement();break;
             default :
                 notImplement();
@@ -1058,12 +1295,34 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
         notImplement();
     }
 
-    private void getElementAttr(String eleName, String eleType, String eleValue, String text, String content) {
-        notImplement();
+    private void getElementAttr(String des, String selector, String pathValue, String attr, String expect) {
+        resultInfo.setStepDes("验证控件 " + des + " 属性");
+        resultInfo.setDetail("属性：" + attr + "，期望值：" + expect);
+        try {
+            AccessibilityNodeInfo ele = findEle(selector, pathValue);
+            JSONObject jsonObject = ((AccessibilityNodeInfoImpl) ele).toJson(false);
+            String attrValue = jsonObject.getString(attr);
+            LogUtil.i(TAG,  attr + " 属性获取结果: " + attrValue);
+            try {
+                Assert.assertEquals(attrValue, expect);
+            } catch (AssertionError e) {
+                resultInfo.setE(e);
+            }
+        } catch (Exception e) {
+            resultInfo.setE(e);
+        }
     }
 
-    private void getActivity(String content) {
-        notImplement();
+    private void getActivity(String expect) {
+        expect = TextHandler.replaceTrans(expect, globalParams);
+        String currentActivity = DeviceUtil.getCurrentActivity();
+        resultInfo.setStepDes("验证当前Activity");
+        resultInfo.setDetail("activity：" + currentActivity + "，期望值：" + expect);
+        try {
+            Assert.assertEquals(expect, currentActivity);
+        } catch (AssertionError e) {
+            resultInfo.setE(e);
+        }
     }
 
     private void getUrl(String content) {
@@ -1072,8 +1331,8 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
 
     private void getTitle(String content) {
 //        String title = chromeDriver.getTitle();
-//        handleContext.setStepDes("验证网页标题");
-//        handleContext.setDetail("标题：" + title + "，期望值：" + expect);
+//        resultInfo.setStepDes("验证网页标题");
+//        resultInfo.setDetail("标题：" + title + "，期望值：" + expect);
         notImplement();
     }
 
@@ -1111,7 +1370,7 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
 
     private void clickXpath(String eleValue) throws Exception {
         try {
-            TService.getInstance().clickByXpath(eleValue);
+            tService.clickByXpath(eleValue);
         } catch (Exception e) {
             e.printStackTrace();
             resultInfo.setE(e);
@@ -1120,7 +1379,7 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
 
     private void clickClassName(String eleValue) throws Exception {
         try {
-            TService.getInstance().clickClassName(eleValue);
+            tService.clickClassName(eleValue);
         } catch (Exception e) {
             LogUtil.e(TAG, "clickClassName: ", e);
             resultInfo.setE(e);
@@ -1129,7 +1388,7 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
 
     private void clickDesc(String eleValue) throws Exception {
         try {
-            TService.getInstance().clickDesc(eleValue);
+            tService.clickDesc(eleValue);
         } catch (Exception e) {
             LogUtil.e(TAG, "clickDesc: ", e);
             resultInfo.setE(e);
@@ -1138,7 +1397,7 @@ public class StepHandler extends StepHandlerBase implements IStepHandler {
 
     private void clickId(String eleValue) throws Exception {
         try {
-            TService.getInstance().clickID(eleValue);
+            tService.clickID(eleValue);
         } catch (Exception e) {
             LogUtil.e(TAG, "clickId: ", e);
             resultInfo.setE(e);

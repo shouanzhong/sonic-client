@@ -3,7 +3,6 @@ package com.autotest.sonicclient.interfaces;
 import com.alibaba.fastjson2.JSONObject;
 import com.autotest.sonicclient.enums.ConditionEnum;
 import com.autotest.sonicclient.model.ResultInfo;
-import com.autotest.sonicclient.threads.RunStepThread;
 
 public interface IStepHandler {
 

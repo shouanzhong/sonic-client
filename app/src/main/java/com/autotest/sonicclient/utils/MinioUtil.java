@@ -2,6 +2,8 @@ package com.autotest.sonicclient.utils;
 
 import android.util.Log;
 
+import com.autotest.sonicclient.application.ApplicationImpl;
+
 import org.jetbrains.annotations.NotNull;
 
 import io.minio.BucketExistsArgs;
@@ -18,7 +20,7 @@ public class MinioUtil {
 //    static String ENDPOINT = "https://play.min.io";
     static String ACCESS_KEY = "SoHeRJJdCXiWsnt4vOAD";
     static String SECRET_KEY = "9FnySk77jfrgvBRohqMNo9HJ5mNznf1zPMBUMlE4";
-    static String ENDPOINT = "http://172.16.142.208:9001";
+    static String ENDPOINT = "http://172.16.142.208:9000";
 
     private MinioUtil() {
     }
@@ -32,7 +34,7 @@ public class MinioUtil {
         String secretKey = SECRET_KEY;
         String endpoint = ENDPOINT;
         @NotNull
-        String bucketName = null;
+        String bucketName = "";
 
         Builder() {
         }
@@ -70,7 +72,7 @@ public class MinioUtil {
         String bucketName;
 
         MinIoClient(Builder builder) {
-            this.bucketName = builder.bucketName;
+            this.bucketName = builder.bucketName.isEmpty() ? ApplicationImpl.getInstance().getPackageName() : builder.bucketName;
             this.accessKey = builder.accessKey;
             this.secretKey = builder.secretKey;
             this.endpoint = builder.endpoint;
@@ -93,7 +95,7 @@ public class MinioUtil {
             }
         }
 
-        public void upload(String source, String target) throws MinioException, Exception {
+        public String upload(String source, String target) throws MinioException, Exception {
             createBucket();
             minioClient.uploadObject(
                     UploadObjectArgs.builder()
@@ -102,6 +104,7 @@ public class MinioUtil {
                             .filename(source)
                             .build());
 //            Log.d(TAG, String.format("upload: source: %s, target: %s", source, target));
+            return String.format("%s/%s/%s", endpoint, bucketName, target);
         }
 
         public void download(String from, String to) throws Exception{

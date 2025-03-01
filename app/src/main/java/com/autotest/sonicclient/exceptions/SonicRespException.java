@@ -1,4 +1,4 @@
-package com.autotest.sonicclient.utils;
+package com.autotest.sonicclient.exceptions;
 
 public class SonicRespException extends Exception {
     public SonicRespException(String message) {

@@ -8,6 +8,8 @@ import androidx.annotation.NonNull;
 import com.alibaba.fastjson2.JSONObject;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.Call;
@@ -63,13 +65,19 @@ public class HttpUtil {
 
         OkHttpClient client = getHttpClient();
         Request request = new Request.Builder()
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
                 .get().url(url).headers(headers).build();
 
         client.newCall(request).enqueue(callback);
     }
 
     public static void get(String url, okhttp3.Callback callback) {
-        Headers headers = Headers.of(Constant.KEY_SONIC_TOKEN, GConfig.SONIC_TOKEN);
+//        Headers headers = Headers.of(Constant.KEY_SONIC_TOKEN, GConfig.SONIC_TOKEN);
+        Headers headers = Headers.of(Constant.KEY_ATHENA_TOKEN, GConfig.SONIC_TOKEN);
+
+        LogUtil.d(TAG, "get: headers: " + headers);
+        LogUtil.d(TAG, "get: url: " + url);
         get(url, headers, callback);
     }
 
@@ -109,11 +117,14 @@ public class HttpUtil {
         OkHttpClient client = getHttpClient();
         Request request = new Request.Builder()
                 .post(body).url(url).header(Constant.KEY_SONIC_TOKEN, GConfig.SONIC_TOKEN).build();
+        LogUtil.d(TAG, "post: headers: " + request.headers());
+        LogUtil.d(TAG, "post: url: " + url);
 
         client.newCall(request).enqueue(callback);
     }
 
     public static void post(String url, String jsonString, okhttp3.Callback callback) {
+        LogUtil.d(TAG, "post: body json: " + jsonString);
         MediaType type = MediaType.parse("application/json; charset=utf-8");
         RequestBody body = RequestBody.create(type, jsonString);
         post(url, body, callback);
@@ -148,17 +159,24 @@ public class HttpUtil {
         @Override
         public void onResponse(Call call, Response response) throws IOException {
             String bodyString = null;
-            if (!response.isSuccessful() || !(JSONObject.parse(bodyString = response.body().string()).getInteger("code") + "").startsWith("2")) {
+            if (!response.isSuccessful()
+//                    || !(JSONObject.parse(bodyString = response.body().string()).getInteger("code") + "").startsWith("2")
+            ) {
                 onFailure(call, new IOException(String.format("Received http response :" +
                         "\nresponse: %s" +
                         "\nbody: %s",
                         response, bodyString)));
                 return;
             }
+            bodyString = response.body().string();
             LogUtil.d(TAG, String.format("onResponse: %s", bodyString));
 
             JSONObject jsonObject = JSONObject.parse(bodyString);
-            T data = (T) jsonObject.get("data");
+            Object dtemp = jsonObject.getOrDefault("data", null);
+            if (dtemp == null) {
+                onFailure(call, new IOException("无 data 返回，请联系开发人员"));
+            }
+            T data = (T) dtemp;
             onResponse(call, data);
         }
 
@@ -167,7 +185,8 @@ public class HttpUtil {
         @Override
         public void onFailure(@NonNull Call call, @NonNull IOException e) {
             LogUtil.e(TAG, "request error ", e);
-            ToastUtil.showToast("请求发送失败");
+
+            LogUtil.e(TAG, "请求发送失败");
 //            SharePreferenceUtil.getInstance(ApplicationImpl.getInstance()).clear(Constant.KEY_SONIC_TOKEN);
 //            GConfig.SONIC_TOKEN = "";
         }

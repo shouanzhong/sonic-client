@@ -38,6 +38,10 @@ public class XMLUtil {
 
 
     public static String nodeToXml(AccessibilityNodeInfo node) {
+        return nodeToXml(node, true);
+    }
+
+    public static String nodeToXml(AccessibilityNodeInfo node, boolean doRecursion) {
         if (node == null) {
             return "<node/>";
         }
@@ -45,7 +49,7 @@ public class XMLUtil {
         StringBuilder xmlBuilder = new StringBuilder();
         xmlBuilder.append("<").append(safeString(node.getClassName()));
 
-        // 添加节点的基本属性
+        // 节点属性
         xmlBuilder.append(String.format(Locale.US, " index=\"%d\"", node.getParent() == null ? 0 : getIndex(node)));
         xmlBuilder.append(String.format(" text=\"%s\"", safeString(node.getText())));
         xmlBuilder.append(String.format(" resource-id=\"%s\"", safeString(node.getViewIdResourceName())));
@@ -63,23 +67,25 @@ public class XMLUtil {
         xmlBuilder.append(String.format(" password=\"%s\"", node.isPassword()));
         xmlBuilder.append(String.format(" selected=\"%s\"", node.isSelected()));
 
-        // 添加节点的边界属性
+        // 边界属性
         Rect bounds = new Rect();
         node.getBoundsInScreen(bounds);
         xmlBuilder.append(String.format(" bounds=\"[%d,%d][%d,%d]\"", bounds.left, bounds.top, bounds.right, bounds.bottom));
 
-        // 检查是否有子节点
+        // 子节点
         if (node.getChildCount() == 0) {
             xmlBuilder.append("/>");
         } else {
             xmlBuilder.append(">");
 
-            // 遍历
-            for (int i = 0; i < node.getChildCount(); i++) {
-                AccessibilityNodeInfo child = node.getChild(i);
-                if (child != null) {
-                    xmlBuilder.append(nodeToXml(child));
-                    child.recycle();
+            if (doRecursion) {
+                // 遍历
+                for (int i = 0; i < node.getChildCount(); i++) {
+                    AccessibilityNodeInfo child = node.getChild(i);
+                    if (child != null) {
+                        xmlBuilder.append(nodeToXml(child));
+                        child.recycle();
+                    }
                 }
             }
             // 闭合
@@ -209,6 +215,10 @@ public class XMLUtil {
 
     public static Point parseBoundsCenter(String s) {
         Rect rect = parseBounds(s);
+        return parseBoundsCenter(rect);
+    }
+
+    public static Point parseBoundsCenter(Rect rect) {
         int x = (rect.left + rect.right) / 2;
         int y = (rect.top + rect.bottom) / 2;
         System.out.printf("Rect: %s, Center point: x: %s, y: %s%n", rect, x, y);
