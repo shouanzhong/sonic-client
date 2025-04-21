@@ -89,9 +89,9 @@ public class MinioUtil {
             if (!found) {
                 // Make a new bucket .
                 minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
-//                Log.i(TAG, "checkBucket: create bucket: " + bucketName);
+//                LogUtil.i(TAG, "checkBucket: create bucket: " + bucketName);
             } else {
-//                Log.i(TAG, "checkBucket: bucket already exists: " + bucketName);
+//                LogUtil.i(TAG, "checkBucket: bucket already exists: " + bucketName);
             }
         }
 
@@ -103,7 +103,7 @@ public class MinioUtil {
                             .object(target)
                             .filename(source)
                             .build());
-//            Log.d(TAG, String.format("upload: source: %s, target: %s", source, target));
+//            LogUtil.d(TAG, String.format("upload: source: %s, target: %s", source, target));
             return String.format("%s/%s/%s", endpoint, bucketName, target);
         }
 

@@ -9,6 +9,7 @@ public class StepResult {
     String log;
     int cid;
     int rid;
+    int deviceId;
     String udId;
     String pic;
     String logcatPath;
@@ -61,6 +62,14 @@ public class StepResult {
         this.rid = rid;
     }
 
+    public int getDeviceId() {
+        return deviceId;
+    }
+
+    public void setDeviceId(int deviceId) {
+        this.deviceId = deviceId;
+    }
+
     public String getUdId() {
         return udId;
     }
@@ -102,5 +111,17 @@ public class StepResult {
 
     public String toJSONString() {
         return JSONObject.toJSONString(this);
+    }
+
+    public JSONObject jsonForReport() {
+        JSONObject reportJson = new JSONObject();
+        reportJson.put("caseId", getCid());
+        reportJson.put("desc", getDes());
+        reportJson.put("deviceId", getDeviceId());
+        reportJson.put("log", getLog());
+        reportJson.put("resultId", getRid());
+        reportJson.put("status", getStatus());
+        reportJson.put("type", "step");
+        return reportJson;
     }
 }

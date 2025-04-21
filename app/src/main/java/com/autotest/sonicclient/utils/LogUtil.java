@@ -32,7 +32,8 @@ public class LogUtil {
         if (LOG_LEVEL > Logger.ERROR) {
             return;
         }
-        Logger.t(tag).e(message + "\n" + getCurrentStrackTraceString(), args);
+//        Logger.t(tag).e(message + "\n" + getCurrentStrackTraceString(), args);
+        Logger.t(tag).e(message, args);
     }
 
     public static void e(String tag, Throwable throwable, String message, Object... args) {

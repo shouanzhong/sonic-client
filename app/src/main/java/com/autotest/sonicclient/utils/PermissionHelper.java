@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.autotest.sonicclient.dialogs.MDialog;
 import com.autotest.sonicclient.services.AdbServiceWrapper;
+import com.autotest.sonicclient.services.DeviceService;
 import com.autotest.sonicclient.services.InjectorService;
 import com.autotest.sonicclient.services.TService;
 
@@ -23,12 +24,13 @@ public class PermissionHelper {
 
 
     public static void checkAdbStatus(AppCompatActivity context) {
-        AdbServiceWrapper adbService = InjectorService.getService(AdbServiceWrapper.class);
-        for (int i = 0; i < 3 && !adbService.isConnected(); i++) {
-            SystemClock.sleep(1000);
-            adbService = InjectorService.getService(AdbServiceWrapper.class);
-        }
-        if (!adbService.isConnected()) {
+//        AdbServiceWrapper adbService = InjectorService.getService(AdbServiceWrapper.class);
+//        for (int i = 0; i < 3 && !adbService.isConnected(); i++) {
+//            SystemClock.sleep(1000);
+//            adbService = InjectorService.getService(AdbServiceWrapper.class);
+//        }
+
+        if (!InjectorService.getService(DeviceService.class).waitAdbConnected()) {
             context.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -79,10 +81,8 @@ public class PermissionHelper {
     }
 
     public static void openAccessibilityActivityIfNotGranted(Context context) {
-        AdbServiceWrapper adbService = InjectorService.getService(AdbServiceWrapper.class);
-        adbService.execCmd("settings put secure enabled_accessibility_services com.autotest.sonicclient/com.autotest.sonicclient.services.TService");
-        adbService.execCmd("settings put secure accessibility_enabled 1");
-        SystemClock.sleep(2000);
+        InjectorService.getService(DeviceService.class).openAccessibilityActivity();
+        SystemClock.sleep(1000);
         if (!PermissionHelper.isAccessibilityServiceEnabled(context, TService.class)) {
             // 提示用户
             PermissionHelper.promptEnableAccessibility(context);

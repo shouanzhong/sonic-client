@@ -1,8 +1,6 @@
 package com.autotest.sonicclient.enums;
 
 
-import javax.xml.xpath.XPath;
-
 public enum SelectorTypes {
     TEXT("getText"),
     RESOURCE_ID("getViewIdResourceName"),

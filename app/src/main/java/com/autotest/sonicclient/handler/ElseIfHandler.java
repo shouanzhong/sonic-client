@@ -58,7 +58,7 @@ public class ElseIfHandler extends StepHandlerBase implements IStepHandler {
         }
         // else if 前应当必定有if，如果前面的if执行成功，则直接跳过
         if (resultInfo.getE() == null) {
-            Log.w(TAG, "runStep: 「else if」前的条件步骤执行通过，「else if」跳过");
+            LogUtil.w(TAG, "runStep: 「else if」前的条件步骤执行通过，「else if」跳过");
             return resultInfo;
         }
         resultInfo.clearStep();
@@ -69,7 +69,7 @@ public class ElseIfHandler extends StepHandlerBase implements IStepHandler {
         // 执行条件步骤
         LogUtil.i(TAG, "runStep: 开始执行「else if」步骤");
         try {
-            stepHandler.runStep(stepJSON, resultInfo);
+            stepHandlerWrapper.runStep(stepJSON, resultInfo);
         } catch (Throwable e) {
             resultInfo.setE(e);
         }
@@ -86,6 +86,7 @@ public class ElseIfHandler extends StepHandlerBase implements IStepHandler {
             resultInfo.setE(new SonicRespException("IGNORE:" + resultInfo.getE().getMessage()));
             LogUtil.i(TAG, "「else if」步骤执行失败，跳过");
         }
+        resultInfo.collect();
         return resultInfo;
     }
 

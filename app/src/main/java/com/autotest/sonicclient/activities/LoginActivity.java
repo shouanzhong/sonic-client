@@ -13,6 +13,7 @@ import com.alibaba.fastjson2.JSONObject;
 import com.autotest.sonicclient.R;
 import com.autotest.sonicclient.utils.Constant;
 import com.autotest.sonicclient.config.GConfig;
+import com.autotest.sonicclient.utils.LogUtil;
 import com.autotest.sonicclient.utils.SharePreferenceUtil;
 import com.autotest.sonicclient.utils.ToastUtil;
 
@@ -24,6 +25,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import okhttp3.ResponseBody;
 
 public class LoginActivity extends AppCompatActivity {
     private static final String TAG = "LoginActivity";
@@ -71,18 +73,13 @@ public class LoginActivity extends AppCompatActivity {
 
     private void rememberMe(String username, String password, String token) {
         if (rememberMeCheckBox.isChecked()) {
-            // 如果勾选了“记住密码”，保存用户名、密码和状态
+            // “记住我”
             SharePreferenceUtil.getInstance(this).putMessage(editor -> {
                 editor.putString(Constant.KEY_USERNAME, username);
                 editor.putString(Constant.KEY_PASSWORD, password);
                 editor.putBoolean(Constant.KEY_REMEMBER_ME, true);
                 editor.putString(Constant.KEY_SONIC_TOKEN, token);
-                GConfig.SONIC_TOKEN = token;
             });
-        } else {
-            // 清除用户名密码
-            SharePreferenceUtil.getInstance(this).clear(Constant.KEY_USERNAME, Constant.KEY_PASSWORD, Constant.KEY_SONIC_TOKEN, Constant.KEY_REMEMBER_ME);
-//            editor.putBoolean(Constant.KEY_REMEMBER_ME, false);
         }
     }
 
@@ -109,7 +106,7 @@ public class LoginActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(okhttp3.Call call, IOException e) {
-                Log.e(TAG, "Request failed: ", e);
+                LogUtil.e(TAG, "Request failed: ", e);
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -121,33 +118,41 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onResponse(okhttp3.Call call, Response response) throws IOException {
                 if (response.isSuccessful()) {
-                    String responseData = response.body().string();
-                    Log.d(TAG, "Response: " + responseData);
+                    String responseData;
+                    try (ResponseBody responseBody = response.body()) {
+                        if (responseBody != null) {
+                            responseData = responseBody.string();
+                            LogUtil.d(TAG, "Response: " + responseData);
 
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                JSONObject responseJson = JSONObject.parse(responseData);
-                                String dataString = (String) responseJson.getOrDefault("data", "");
-                                if (!dataString.isEmpty()) {
-                                    // 登录成功
-                                    ToastUtil.showToast("Login successful");
-                                    rememberMe(username, password, dataString);
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        JSONObject responseJson = JSONObject.parse(responseData);
+                                        String token = (String) responseJson.getOrDefault("data", "");
+                                        if (!token.isEmpty()) {
+                                            // 登录成功
+                                            ToastUtil.showToast("Login successful");
+                                            GConfig.SONIC_TOKEN = token;
+                                            rememberMe(username, password, token);
 
-                                    Intent intent = new Intent(LoginActivity.this, SuitActivity.class);
-                                    startActivity(intent);
-                                    finish(); // 结束当前 Activity
-                                } else {
-                                    ToastUtil.showToast("Invalid username or password");
+                                            Intent intent = new Intent(LoginActivity.this, SuitActivity.class);
+                                            startActivity(intent);
+                                            finish(); // 结束当前
+                                        } else {
+                                            ToastUtil.showToast("Invalid username or password");
+                                        }
+                                    } catch (Exception e) {
+                                        ToastUtil.showToast("Login failed");
+                                    }
                                 }
-                            } catch (Exception e) {
-                                ToastUtil.showToast("Login failed");
-                            }
+                            });
+                        } else {
+                            LogUtil.e(TAG, "onResponse: 请求数据获取失败");
                         }
-                    });
+                    }
                 } else {
-                    Log.e(TAG, "Request failed: " + response.message());
+                    LogUtil.e(TAG, "Request failed: " + response.message());
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {

@@ -2,6 +2,8 @@ package com.autotest.sonicclient.handler;
 
 import android.content.Context;
 
+import com.autotest.sonicclient.services.DeviceService;
+import com.autotest.sonicclient.services.InjectorService;
 import com.autotest.sonicclient.utils.FileUtil;
 import com.autotest.sonicclient.utils.ShellUtil;
 
@@ -21,7 +23,7 @@ public class LogHandler {
         File file = new File(context.getExternalFilesDir(null), fileName);
         file.createNewFile();
         try(BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
-            ShellUtil.execCmd("logcat -d -time -v", new ShellUtil.OnStreamChangedListener() {
+            InjectorService.getService(DeviceService.class).execCmd("logcat -d -v time", new ShellUtil.OnStreamChangedListener() {
                 @Override
                 public void onStreamChanged(String line) {
                     try {

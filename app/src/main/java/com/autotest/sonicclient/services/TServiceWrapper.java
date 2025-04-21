@@ -37,8 +37,23 @@ public class TServiceWrapper {
 
     @Assemble
     private AccessibilityService accessibilityService;
+    @Assemble
+    private AdbServiceWrapper adbService;
+
+    public boolean isReady() {
+        return accessibilityService != null && ((TService) accessibilityService).isConnected();
+    }
+
+    boolean waitService(int timeout) {
+        long tStart = System.currentTimeMillis();
+        while (!isReady() && tStart + timeout > System.currentTimeMillis()) {
+            SystemClock.sleep(500);
+        }
+        return isReady();
+    }
 
     AccessibilityNodeInfo getRootInActiveWindow() {
+        waitService(5000);
         return accessibilityService.getRootInActiveWindow();
     }
 
@@ -56,12 +71,12 @@ public class TServiceWrapper {
         return rootNode;
     }
 
-    public AccessibilityNodeInfo findNodeById(String id) throws Exception {
-        AccessibilityNodeInfo accessibilityNodeInfo = getAccessibilityNodeInfo();
-        return accessibilityNodeInfo.findAccessibilityNodeInfosByViewId(id).get(0);
-    }
+//    public AccessibilityNodeInfo findNodeById(String id) throws Exception {
+//        AccessibilityNodeInfo accessibilityNodeInfo = getAccessibilityNodeInfo();
+//        return accessibilityNodeInfo.findAccessibilityNodeInfosByViewId(id).get(0);
+//    }
 
-    public void sendKey() {
+    public void pressHomeKey() {
         accessibilityService.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME);
     }
 
@@ -111,7 +126,7 @@ public class TServiceWrapper {
         try {
             rootNode = getAccessibilityNodeInfo();
         } catch (Exception e) {
-            LogUtil.e(TAG, "读取界面失败", e);
+            LogUtil.w(TAG, "读取界面失败", e.getMessage());
             return "";
         }
         return XMLUtil.nodeToXml(rootNode);
@@ -156,7 +171,7 @@ public class TServiceWrapper {
         return false;
     }
 
-    public AccessibilityNodeInfo findNode(Selector selector) throws Exception {
+    public AccessibilityNodeInfoImpl findNode(Selector selector) throws Exception {
         AccessibilityNodeInfo accessibilityNodeInfo = getAccessibilityNodeInfo();
         if (selector.getType().getValue().isEmpty()) {
             return findByXpath(selector);
@@ -164,13 +179,13 @@ public class TServiceWrapper {
         return findNode(accessibilityNodeInfo, selector);
     }
 
-    private AccessibilityNodeInfo findByXpath(Selector selector) {
+    private AccessibilityNodeInfoImpl findByXpath(Selector selector) {
         String xml = getXml();
         Node node = XMLUtil.findNodeByXpath(selector.getValue(), xml);
         if (node == null) {
             return null;
         }
-        return new AccessibilityNodeInfoImpl(node);
+        return new AccessibilityNodeInfoImpl(node, this);
     }
 
     public AccessibilityNodeInfoImpl findNode(AccessibilityNodeInfo rootNode, Selector selector) throws Exception {
@@ -182,17 +197,18 @@ public class TServiceWrapper {
         Method method = accessibilityNodeInfoClass.getMethod(selector.getType().getValue());
         Object resVal = method.invoke(rootNode);
         String val = null;
-        Log.i(TAG, "findNode: resVal: " + resVal);
         if (resVal != null) {
             if (resVal instanceof String) {
                 val = (String) resVal;
-            } else if (resVal instanceof Boolean) {
+            } else if (resVal.getClass().getName().equals("android.text.method.ReplacementTransformationMethod$SpannedReplacementCharSequence")) {
+                val = resVal.toString();
+            }  else if (resVal instanceof Boolean) {
                 val = String.valueOf(resVal);
             } else {
                 throw new Exception(String.format("Analyse Error: Value from Method is : %s, type: %s", resVal, resVal.getClass()));
             }
             if (selector.getValue().equals(val)) {
-                return new AccessibilityNodeInfoImpl(rootNode);
+                return new AccessibilityNodeInfoImpl(rootNode, this);
             }
         }
 
@@ -201,7 +217,7 @@ public class TServiceWrapper {
             if (childNode != null) {
                 AccessibilityNodeInfo node = findNode(childNode, selector);
                 if (node != null) {
-                    return new AccessibilityNodeInfoImpl(node);
+                    return new AccessibilityNodeInfoImpl(node, this);
                 }
             }
         }
@@ -258,18 +274,24 @@ public class TServiceWrapper {
     private boolean performClick(AccessibilityNodeInfo nodeInfo) {
         if (nodeInfo == null) return false;
 
-        if (nodeInfo.isClickable()) {
+        try {
             nodeInfo.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-            return true;
-        } else {
-            Log.e(TAG, String.format("performClick: nodeinfo %s not clickable", nodeInfo));
+        } catch (Exception e) {
+            Log.e(TAG, "performClick: ", e);
+            return false;
         }
-
-        AccessibilityNodeInfo parent = nodeInfo.getParent();
-        return parent != null && performClick(parent);
+        return true;
+//        if (nodeInfo.isClickable()) {
+//            return true;
+//        } else {
+//            LogUtil.e(TAG, String.format("performClick: nodeinfo %s not clickable", nodeInfo));
+//        }
+//
+//        AccessibilityNodeInfo parent = nodeInfo.getParent();
+//        return parent != null && performClick(parent);
     }
 
-    public boolean click(String MethodName, String param) throws Exception {
+    boolean click(String MethodName, String param) throws Exception {
         AccessibilityNodeInfo rootNode = getAccessibilityNodeInfo();
 
         List<AccessibilityNodeInfo> nodes = null;
@@ -311,33 +333,36 @@ public class TServiceWrapper {
         performClickByClassName(rootNode, className);
     }
 
+    public void clickPos(Point point) throws Exception {
+        clickPos(point.x, point.y);
+    }
+
     public void clickPos(float x, float y) throws Exception {
-//        performGlobalAction(GLOBAL_ACTION_HOME); // 回到主屏
-        // 创建手势路径
+        // 路径
         Path path = new Path();
         path.moveTo(x, y); // 定义路径起点为点击的坐标
 
-        // 创建手势描述
+        // 描述
         GestureDescription.StrokeDescription stroke = new GestureDescription.StrokeDescription(path, 0, 200);
         GestureDescription gesture = new GestureDescription.Builder().addStroke(stroke).build();
 
-        // 执行手势
+        // 执行
         boolean result = accessibilityService.dispatchGesture(gesture, new AccessibilityService.GestureResultCallback() {
             @Override
             public void onCompleted(GestureDescription gestureDescription) {
                 super.onCompleted(gestureDescription);
-                Log.d(TAG, "Gesture completed successfully.");
+                LogUtil.d(TAG, "Gesture completed successfully.");
             }
 
             @Override
             public void onCancelled(GestureDescription gestureDescription) {
                 super.onCancelled(gestureDescription);
-                Log.d(TAG, "Gesture cancelled.");
+                LogUtil.d(TAG, "Gesture cancelled.");
             }
         }, new Handler(Looper.getMainLooper()));
         LogUtil.d(TAG, "clickPos: 点击结果：" + result);
         if (!result) {
-            Log.e(TAG, "Gesture dispatch failed.");
+            LogUtil.e(TAG, "Gesture dispatch failed.");
             throw new Exception(String.format("执行点击失败 (%s, %s)", x, y));
         }
     }
@@ -360,27 +385,6 @@ public class TServiceWrapper {
         Path path2 = new Path();
         path2.moveTo(points.get(2).x, points.get(2).y); // 第二个手指位置
         path2.lineTo(points.get(3).x, points.get(3).y);
-
-        GestureDescription.StrokeDescription strokeDescription1 = new GestureDescription.StrokeDescription(path1, 0, 1000);
-        GestureDescription.StrokeDescription strokeDescription2 = new GestureDescription.StrokeDescription(path2, 0, 1000);
-
-        GestureDescription gestureDescription = new GestureDescription.Builder()
-                .addStroke(strokeDescription1)
-                .addStroke(strokeDescription2)
-                .build();
-
-        accessibilityService.dispatchGesture(gestureDescription, null, null);
-    }
-
-    // 模拟双指触控操作
-    public void performZoomIn() {
-        Path path1 = new Path();
-        path1.moveTo(500, 1200); // 第一个手指位置
-        path1.lineTo(700, 700);
-
-        Path path2 = new Path();
-        path2.moveTo(500, 1200); // 第二个手指位置
-        path2.lineTo(200, 1800);
 
         GestureDescription.StrokeDescription strokeDescription1 = new GestureDescription.StrokeDescription(path1, 0, 1000);
         GestureDescription.StrokeDescription strokeDescription2 = new GestureDescription.StrokeDescription(path2, 0, 1000);

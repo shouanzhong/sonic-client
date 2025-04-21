@@ -1,4 +1,4 @@
-package com.autotest.sonicclient.utils;
+package com.autotest.sonicclient.utils.http;
 
 import android.text.TextUtils;
 import android.util.Log;
@@ -11,6 +11,8 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import okhttp3.Call;
 import okhttp3.Headers;
@@ -22,6 +24,8 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 
 import com.autotest.sonicclient.config.GConfig;
+import com.autotest.sonicclient.utils.Constant;
+import com.autotest.sonicclient.utils.LogUtil;
 
 public class HttpUtil {
     private static final String TAG = "HttpUtil";
@@ -39,7 +43,8 @@ public class HttpUtil {
                     .followSslRedirects(true)
                     .retryOnConnectionFailure(true)
                     .cache(null)
-                    .connectTimeout(5, TimeUnit.SECONDS)
+                    .addInterceptor(new HttpRetryInterceptor())
+                    .connectTimeout(10, TimeUnit.SECONDS)
                     .writeTimeout(30, TimeUnit.SECONDS)
                     .readTimeout(30, TimeUnit.SECONDS);
 
@@ -113,7 +118,7 @@ public class HttpUtil {
             LogUtil.e(TAG, "无法解析空连接");
             return;
         }
-
+        Logger.getLogger(OkHttpClient.class.getName()).setLevel(Level.FINE);
         OkHttpClient client = getHttpClient();
         Request request = new Request.Builder()
                 .post(body).url(url).header(Constant.KEY_SONIC_TOKEN, GConfig.SONIC_TOKEN).build();
@@ -132,11 +137,13 @@ public class HttpUtil {
 
     /**
      * 同步post
-     * @param url
-     * @param body
-     * @return
-     * @throws IOException
      */
+    public static String postSync(String url, String jsonString) throws IOException {
+        MediaType type = MediaType.parse("application/json; charset=utf-8");
+        RequestBody body = RequestBody.create(type, jsonString);
+        return postSync(url, body);
+    }
+
     public static String postSync(String url, RequestBody body) throws IOException {
         if (TextUtils.isEmpty(url)) {
             LogUtil.e(TAG, "无法解析空连接");
@@ -147,11 +154,20 @@ public class HttpUtil {
         Request request = new Request.Builder()
                 .post(body).url(url).header(Constant.KEY_SONIC_TOKEN, GConfig.SONIC_TOKEN).build();
 
-        ResponseBody resBody = client.newCall(request).execute().body();
-        if (resBody == null) {
-            return null;
+        LogUtil.d(TAG, "postSync: headers: " + request.headers());
+        LogUtil.d(TAG, "postSync: url: " + url);
+        String respString = null;
+        try (Response response = client.newCall(request).execute()) {  //
+            if (response.isSuccessful()) {
+                respString = response.body().string();
+                LogUtil.d(TAG, "postSync: response: " + respString);
+            } else {
+                LogUtil.w(TAG, "postSync: 请求失败");
+            }
+        } catch (IOException e) {
+            LogUtil.e(TAG, "postSync: 请求失败", e);
         }
-        return resBody.string();
+        return respString;
     }
 
     public static abstract class Callback<T> implements okhttp3.Callback {
@@ -169,6 +185,7 @@ public class HttpUtil {
                 return;
             }
             bodyString = response.body().string();
+            response.close();
             LogUtil.d(TAG, String.format("onResponse: %s", bodyString));
 
             JSONObject jsonObject = JSONObject.parse(bodyString);

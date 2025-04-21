@@ -2,14 +2,12 @@ package com.autotest.sonicclient.nodes;
 
 import android.graphics.Point;
 import android.graphics.Rect;
-import android.os.Build;
 import android.os.Bundle;
 import android.view.accessibility.AccessibilityNodeInfo;
 
-import androidx.annotation.RequiresApi;
-
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.autotest.sonicclient.services.TServiceWrapper;
 import com.autotest.sonicclient.utils.XMLUtil;
 
 import org.jetbrains.annotations.NotNull;
@@ -19,13 +17,19 @@ import org.w3c.dom.Node;
 public class AccessibilityNodeInfoImpl extends AccessibilityNodeInfo {
 
     private AccessibilityNodeInfo nodeInfo;
+    TServiceWrapper tService;
 
     public AccessibilityNodeInfoImpl(AccessibilityNodeInfo nodeInfo) {
         super(nodeInfo);
-        this.nodeInfo = nodeInfo;
     }
 
-    public AccessibilityNodeInfoImpl(@NotNull Node node) {
+    public AccessibilityNodeInfoImpl(AccessibilityNodeInfo nodeInfo, TServiceWrapper tService) {
+        super(nodeInfo);
+        this.tService = tService;
+    }
+
+    public AccessibilityNodeInfoImpl(@NotNull Node node, TServiceWrapper tService) {
+        this.tService = tService;
         NamedNodeMap attributes = node.getAttributes();
 
         setPackageName(attributes.getNamedItem("package").getNodeValue());
@@ -46,7 +50,7 @@ public class AccessibilityNodeInfoImpl extends AccessibilityNodeInfo {
         setBoundsInScreen(XMLUtil.parseBounds(attributes.getNamedItem("bounds").getNodeValue()));
     }
 
-    public void setInputFieldText(String text) {
+    public void inputText(String text) {
         Bundle arguments = new Bundle();
         arguments.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text);
 
@@ -57,6 +61,19 @@ public class AccessibilityNodeInfoImpl extends AccessibilityNodeInfo {
         Rect rect = new Rect();
         this.getBoundsInScreen(rect);
         return XMLUtil.parseBoundsCenter(rect);
+    }
+
+    public void click() throws Exception {
+        tService.clickPos(getVisibleCenter());
+    }
+
+    @Override
+    public AccessibilityNodeInfo getParent() {
+        try {
+            return super.getParent();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     // 获取节点的索引
@@ -80,7 +97,7 @@ public class AccessibilityNodeInfoImpl extends AccessibilityNodeInfo {
     public JSONObject toJson(boolean doRecursion) {
 
         JSONObject jsonNode = new JSONObject();
-        try {
+
             // 添加节点属性
             jsonNode.put("index", this.getParent() != null ? this.getIndex() : 0);
             jsonNode.put("text", this.getText() != null ? this.getText().toString() : "");
@@ -113,9 +130,6 @@ public class AccessibilityNodeInfoImpl extends AccessibilityNodeInfo {
                 }
                 jsonNode.put("children", childrenArray);
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
         return jsonNode;
     }
 }

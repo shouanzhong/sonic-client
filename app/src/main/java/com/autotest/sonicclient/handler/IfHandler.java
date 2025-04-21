@@ -59,7 +59,7 @@ public class IfHandler extends StepHandlerBase implements IStepHandler {
         LogUtil.i(TAG, "runStep: 开始执行「if」步骤");
         LogUtil.d(TAG, String.format("runStep: stepJSON: %s", stepJSON));
         try {
-            stepHandler.runStep(stepJSON, resultInfo);
+            stepHandlerWrapper.runStep(stepJSON, resultInfo);
         } catch (Throwable e) {
             resultInfo.setE(e);
         }

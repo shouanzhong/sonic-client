@@ -6,16 +6,24 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import android.Manifest;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.SystemClock;
+import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.autotest.sonicclient.MainActivity;
 import com.autotest.sonicclient.config.GConfig;
+import com.autotest.sonicclient.services.AdbService;
 import com.autotest.sonicclient.services.AdbServiceWrapper;
 import com.autotest.sonicclient.services.InjectorService;
+import com.autotest.sonicclient.threads.MExecutor;
+import com.autotest.sonicclient.utils.LogUtil;
 import com.autotest.sonicclient.utils.PermissionHelper;
 import com.autotest.sonicclient.utils.ToastUtil;
 
@@ -36,7 +44,7 @@ public class BaseActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         //
         String sonicToken = GConfig.SONIC_TOKEN;
-        Log.d(TAG, "onCreate: token : " + sonicToken);
+        LogUtil.d(TAG, "onCreate: token : " + sonicToken);
         if (sonicToken == null || TextUtils.isEmpty(sonicToken)) {
             redirectLogin();
         }
@@ -51,6 +59,21 @@ public class BaseActivity extends AppCompatActivity {
                 PermissionHelper.checkAdbStatus(BaseActivity.this);
             }
         }).start();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (!Environment.isExternalStorageManager()) {
+            try {
+                Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+                intent.setData(Uri.parse("package:" + getPackageName()));
+                startActivity(intent);
+            } catch (ActivityNotFoundException e) {
+                Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+                startActivity(intent);
+            }
+        }
     }
 
     private void checkAndRequestPermissions() {

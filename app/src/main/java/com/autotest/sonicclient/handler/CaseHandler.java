@@ -45,17 +45,16 @@ public class CaseHandler {
         ResultInfo resultInfo = new ResultInfo();
         resultInfo.setCaseId(cid);
         resultInfo.setResultId(rid);
+        resultInfo.setDeviceId(deviceId);
 
         List<JSONObject> steps = JsonParser.parseStep(caseInfo);
         for (JSONObject step : steps) {
             LogUtil.i(TAG, "SuitInfoListener: step: " + step);
             stepHandlerWrapper.setRunning(monitorService.getStatus().isRunning());
             try {
-//                resultInfo.clearStep();
                 step.put(Constant.KEY_CASE_INFO_GLOBAL_PARAMS, caseInfo.getJSONObject("caseStepVo").get(Constant.KEY_CASE_INFO_GLOBAL_PARAMS));
                 stepHandlerWrapper.runStep(step, resultInfo);
             } catch (Throwable e) {
-                LogUtil.e(TAG, String.format("步骤[%s]执行异常: ", step.getJSONObject(Constant.KEY_STEP_INFO_STEP).getString(Constant.KEY_STEP_INFO_TYPE)), e);
                 resultInfo.setE(e);
                 resultInfo.packError();
                 resultInfo.collect();
@@ -65,7 +64,7 @@ public class CaseHandler {
         String logPath = "";
         if (resultInfo.haveError()) {
             try {
-                logPath = LogHandler.dumpLogcat(context, (String) caseInfo.get("desc"));
+                logPath = LogHandler.dumpLogcat(context, caseName);
             } catch (IOException e) {
                 e.printStackTrace();
                 logPath = "Fail to dump logcat !! " + e.getMessage();
@@ -74,7 +73,7 @@ public class CaseHandler {
         JSONArray stepResultList = resultInfo.getStepResultList();
         caseResult.setSteps(stepResultList);
         caseResult.setLogUri(logPath);
-        Log.i(TAG, "handle: case result:" + caseResult);
+        LogUtil.i(TAG, "handle: case result:" + caseResult);
         return caseResult;
     }
 }

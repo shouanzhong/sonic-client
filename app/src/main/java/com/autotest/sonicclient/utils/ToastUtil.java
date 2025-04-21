@@ -25,7 +25,7 @@ public class ToastUtil {
             sToast = Toast.makeText(context, msg, Toast.LENGTH_SHORT);
             sToast.show();
         }
-        LogUtil.d(context.getClass().toString(), msg);
+        LogUtil.d(context.getClass().getSimpleName(), msg);
     }
 
     public static void showToast(Context context, String msg) {

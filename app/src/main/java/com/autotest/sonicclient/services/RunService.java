@@ -7,16 +7,14 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
-import android.app.Service;
 import android.content.Intent;
-import android.graphics.Color;
+import android.content.IntentFilter;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
-import android.os.SystemClock;
-import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
@@ -36,13 +34,21 @@ public class RunService extends ServiceBase {
     private NotificationCompat.Builder notificationBuilder;
     private static final int NOTIFICATION_ID = 1;
     private NotificationManager manager;
+    private StopServiceReceiver stopReceiver;
+    public static final String ACTION_STOP_SERVICE = "ACTION_STOP_SERVICE";
 
     @Override
     public void onCreate() {
         super.onCreate();
+        // 注册广播
+        stopReceiver = new StopServiceReceiver(this);
+        IntentFilter filter = new IntentFilter(ACTION_STOP_SERVICE);
+        registerReceiver(stopReceiver, filter);
+
         manager = getSystemService(NotificationManager.class);
         startForegroundService();
     }
+
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -77,37 +83,52 @@ public class RunService extends ServiceBase {
 
     private void handleActionRunSuit(JSONObject suitInfo) {
         LogUtil.d(TAG, "handleActionRunSuit: ");
+        updateRunningNotificationContext("测试中...");
         SuitResult suitResult = SuitHandler.runSuit(this, suitInfo, new MonitorService.StatusListener() {
             @Override
             public boolean isRunning() {
                 return isRunning;
             }
         });
-        // ReportHandler.send(suitResult);
-        updateNotificationContext("测试完成");
+//         ReportHandler.send(suitResult);  // 发送结果
+        if (isRunning) {
+            updateFinishNotification("测试完成");
+            isRunning = false;
+        }
     }
 
     private void startForegroundService() {
         createNotificationChannel();
+        Notification notification = buildNotification("测试中...", true);
+
+        startForeground(NOTIFICATION_ID, notification);
+    }
+
+    @NonNull
+    private Notification buildNotification(String text, boolean addStop) {
         // 停止服务
-        Intent stopIntent = new Intent(this, StopServiceReceiver.class);
-        PendingIntent stopPendingIntent = PendingIntent.getBroadcast(this, 0, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+        Intent stopIntent = new Intent(ACTION_STOP_SERVICE);
+        PendingIntent stopPendingIntent = PendingIntent.getBroadcast(
+                this, 0, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
         // 下拉菜单
         Intent notificationIntent = new Intent(this, SuitActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
 
         notificationBuilder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle(Constant.APP_NAME)
-                .setContentText("测试中...")
+                .setContentText(text)
                 .setSmallIcon(R.drawable.ic_baseline_run_circle_24)
                 .setColor(ContextCompat.getColor(this, R.color.purple_200))
                 .setContentIntent(pendingIntent)
-                .addAction(R.drawable.ic_noti_stop, "停止", stopPendingIntent)
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT);;
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(text)) // 关键代码：设置长文本模式
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT);
+        if (addStop) {
+            notificationBuilder.addAction(R.drawable.ic_noti_stop, "停止", stopPendingIntent);
+        }
         Notification notification = notificationBuilder
                 .build();
-
-        startForeground(NOTIFICATION_ID, notification);
+        return notification;
     }
 
     private void createNotificationChannel() {
@@ -122,15 +143,22 @@ public class RunService extends ServiceBase {
         }
     }
 
-    private void updateNotificationContext(String text) {
+    public void updateRunningNotificationContext(String text) {
         Notification notification = notificationBuilder.setContentText(text).build();
         manager.notify(NOTIFICATION_ID, notification);
     }
+
+    public void updateFinishNotification(String text) {
+        Notification newNotification = buildNotification(text, false);
+        manager.notify(NOTIFICATION_ID, newNotification);
+    }
+
 
     @Override
     public void onDestroy() {
         super.onDestroy();
         isRunning = false;
-        Log.i(TAG, "onDestroy: ");
+        unregisterReceiver(stopReceiver);
+        LogUtil.i(TAG, "onDestroy: ");
     }
 }

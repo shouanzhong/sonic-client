@@ -21,7 +21,6 @@ import android.content.Context;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.autotest.sonicclient.enums.ConditionEnum;
-import com.autotest.sonicclient.enums.StepType;
 import com.autotest.sonicclient.interfaces.Assemble;
 import com.autotest.sonicclient.interfaces.HandlerService;
 import com.autotest.sonicclient.interfaces.IStepHandler;
@@ -45,7 +44,7 @@ public class WhileHandler extends StepHandlerBase implements IStepHandler {
     @Assemble
     private StepHandler stepHandler;
     @Assemble
-    private StepHandlerWrapper handlerWrapper;
+    private StepHandlerWrapper stepHandlerWrapper;
 
     public WhileHandler(Context context) {
         super(context);
@@ -56,7 +55,6 @@ public class WhileHandler extends StepHandlerBase implements IStepHandler {
         if (isStopped()) {
             return null;
         }
-//        resultInfo = new ResultInfo();
 
         // 取出 while 下的步骤集合
         JSONObject conditionStep = stepJSON.getJSONObject("step");
@@ -65,7 +63,7 @@ public class WhileHandler extends StepHandlerBase implements IStepHandler {
         LogUtil.i(TAG, "开始执行「while」步骤");
 
         try {
-            stepHandler.runStep(stepJSON, resultInfo);
+            stepHandlerWrapper.runStep(stepJSON, resultInfo);
         } catch (Throwable e) {
             resultInfo.setE(e);
         }
@@ -75,13 +73,13 @@ public class WhileHandler extends StepHandlerBase implements IStepHandler {
             LogUtil.i(TAG, "「while」步骤通过，开始执行第「" + i + "」次子步骤循环");
 
             for (JSONObject step : steps) {
-                handlerWrapper.runStep(handlerPublicStep(step), resultInfo);
+                stepHandlerWrapper.runStep(handlerPublicStep(step), resultInfo);
             }
             LogUtil.i(TAG, "第「" + i + "」次子步骤执行完毕");
 
             resultInfo.clearStep();
             LogUtil.i(TAG, "开始执行第「" + (i + 1) + "」次「while」步骤");
-            stepHandler.runStep(stepJSON, resultInfo);
+            stepHandlerWrapper.runStep(stepJSON, resultInfo);
 
             i++;
         }

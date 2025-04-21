@@ -49,7 +49,7 @@ public class LoopWithoutCheckHandler extends StepHandlerBase implements IStepHan
             int i = 1;
             while (System.currentTimeMillis() < end && resultInfo.getE() == null && !isStopped()) {
                 LogUtil.i(TAG, "开始执行第「" + i + "」次「无条件循环」步骤", "");
-                stepHandler.runStep(stepJSON, resultInfo);
+                handlerWrapper.runStep(stepJSON, resultInfo);
                 LogUtil.i(TAG, "第「" + i + "」次子步骤执行完毕", "");
 //                resultInfo.clearStep();
                 i++;
@@ -64,7 +64,7 @@ public class LoopWithoutCheckHandler extends StepHandlerBase implements IStepHan
                     stepJSON.put("count", i);
 
                     LogUtil.i(TAG, "开始执行第「" + i + "」次「无条件循环」步骤", "");
-                    stepHandler.runStep(stepJSON, resultInfo);
+                    handlerWrapper.runStep(stepJSON, resultInfo);
                     LogUtil.i(TAG, "第「" + i + "」次子步骤执行完毕", "");
 
                     i++;
@@ -87,7 +87,7 @@ public class LoopWithoutCheckHandler extends StepHandlerBase implements IStepHan
 //
 //            resultInfo.clearStep();
 //            LogUtil.i(TAG, "开始执行第「" + (i + 1) + "」次「无条件循环」步骤");
-//            stepHandler.runStep(stepJSON, resultInfo);
+//            handlerWrapper.runStep(stepJSON, resultInfo);
 //
 //            i++;
 //        }

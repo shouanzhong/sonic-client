@@ -17,6 +17,7 @@ package com.autotest.sonicclient.logger;
 
 import android.util.Log;
 
+import com.autotest.sonicclient.utils.LogUtil;
 import com.orhanobut.logger.FormatStrategy;
 
 public class SimpleFormatStrategy implements FormatStrategy {

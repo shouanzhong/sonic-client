@@ -2,6 +2,7 @@ package com.autotest.sonicclient.model;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.autotest.sonicclient.enums.StepType;
 
 public class CaseResult {
     int cid;
@@ -10,6 +11,7 @@ public class CaseResult {
     String caseName;
     JSONArray steps;
     String logUri;
+    boolean isPass;
 
     public int getCid() {
         return cid;
@@ -57,6 +59,22 @@ public class CaseResult {
 
     public void setLogUri(String logUri) {
         this.logUri = logUri;
+    }
+
+    public boolean isPass() {
+        if (steps.isEmpty()) {
+            return true;
+        }
+        for (StepResult stepResult : steps.toJavaList(StepResult.class)) {
+            if (stepResult.getStatus() == StepType.ERROR) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public void setPass(boolean pass) {
+        isPass = pass;
     }
 
     public String toJSONString() {

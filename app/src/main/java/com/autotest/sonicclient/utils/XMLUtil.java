@@ -2,6 +2,7 @@ package com.autotest.sonicclient.utils;
 
 import android.graphics.Point;
 import android.graphics.Rect;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.WindowInsetsAnimation;
 import android.view.accessibility.AccessibilityNodeInfo;
@@ -35,6 +36,7 @@ import javax.xml.xpath.XPathFactory;
 
 public class XMLUtil {
     private static final String TAG = "XMLUtil";
+    public static final String EMPTY_TAG = "<node/>";
 
 
     public static String nodeToXml(AccessibilityNodeInfo node) {
@@ -43,7 +45,7 @@ public class XMLUtil {
 
     public static String nodeToXml(AccessibilityNodeInfo node, boolean doRecursion) {
         if (node == null) {
-            return "<node/>";
+            return EMPTY_TAG;
         }
 
         StringBuilder xmlBuilder = new StringBuilder();
@@ -174,11 +176,12 @@ public class XMLUtil {
             return nodes;
         } catch (Exception e) {
             e.printStackTrace();
+            LogUtil.w(TAG, String.format("符合 xpath 的元素不存在: [%s] ", xString));
         }
         return null;
     }
 
-    private static String tag2Class(String xml) throws ParserConfigurationException, IOException, SAXException, TransformerException {
+    public static String tag2Class(String xml) throws ParserConfigurationException, IOException, SAXException, TransformerException {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder builder = factory.newDocumentBuilder();
         Document document = builder.parse(new java.io.ByteArrayInputStream(xml.getBytes()));
@@ -221,7 +224,7 @@ public class XMLUtil {
     public static Point parseBoundsCenter(Rect rect) {
         int x = (rect.left + rect.right) / 2;
         int y = (rect.top + rect.bottom) / 2;
-        System.out.printf("Rect: %s, Center point: x: %s, y: %s%n", rect, x, y);
+        LogUtil.d(TAG, String.format("Rect: %s, Center point: x: %s, y: %s%n", rect, x, y));
         return new Point(x, y);
     }
 
@@ -234,7 +237,7 @@ public class XMLUtil {
             arrayList.add(Integer.parseInt(val));
         }
         if (arrayList.size() != 4) {
-            Log.e(TAG, "parseBounds: List: " + arrayList, new Exception("4 Param is required"));
+            LogUtil.e(TAG, "parseBounds: List: " + arrayList, new Exception("4 Param is required"));
             return null;
         }
         return new Rect(arrayList.get(0), arrayList.get(1), arrayList.get(2), arrayList.get(3));

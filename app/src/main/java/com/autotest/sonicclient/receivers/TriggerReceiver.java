@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.util.Log;
 
 import com.autotest.sonicclient.utils.Constant;
+import com.autotest.sonicclient.utils.LogUtil;
 import com.autotest.sonicclient.utils.PermissionHelper;
 
 public class TriggerReceiver extends BroadcastReceiver {
@@ -16,7 +17,7 @@ public class TriggerReceiver extends BroadcastReceiver {
         // TODO: This method is called when the BroadcastReceiver is receiving
         // an Intent broadcast.
         String action = intent.getAction();
-        Log.i(TAG, "onReceive: " + action);
+        LogUtil.i(TAG, "onReceive: " + action);
         if (action == null) {
             return;
         }

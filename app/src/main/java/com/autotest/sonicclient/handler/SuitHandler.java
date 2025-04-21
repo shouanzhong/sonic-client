@@ -9,6 +9,7 @@ import com.autotest.sonicclient.interfaces.Assemble;
 import com.autotest.sonicclient.interfaces.CustomService;
 import com.autotest.sonicclient.model.CaseResult;
 import com.autotest.sonicclient.model.SuitResult;
+import com.autotest.sonicclient.services.AdbServiceWrapper;
 import com.autotest.sonicclient.services.MonitorService;
 import com.autotest.sonicclient.utils.Constant;
 import com.autotest.sonicclient.utils.InstrumentImpl;
@@ -20,9 +21,12 @@ public class SuitHandler {
     private static final String TAG = "SuitHandler";
     @Assemble
     static MonitorService monitorService;
+    @Assemble
+    static AdbServiceWrapper adbService;
 
 
     public static SuitResult runSuit(Context context, JSONObject suitInfo, MonitorService.StatusListener statusListener) {
+
         LogUtil.d(TAG, "runSuit: suitInfo: " + suitInfo);
         SuitResult suitResult = new SuitResult();
         suitResult.setSid(suitInfo.getInteger(Constant.KEY_SUIT_INFO_SID));
@@ -35,7 +39,12 @@ public class SuitHandler {
             @Override
             public void handle(JSONObject caseInfo) {
                 CaseResult caseResult = CaseHandler.runCase(context, caseInfo);
-                ReportHandler.sendStepsResult(context, caseResult);
+//                ReportHandler.sendStepsResult(context, caseResult);
+                try {
+                    ReportHandler.sendCaseResult(context, caseResult);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
                 suitResult.getCases().add(caseResult);
             }
 
@@ -44,16 +53,11 @@ public class SuitHandler {
                 return !(monitorService.getStatus().isRunning());
             }
         });
-        LogUtil.d(TAG, "runSuit: " + suitResult);
+        LogUtil.d(TAG, "runSuit: suitResult: " + suitResult);
         return suitResult;
     }
 
     private static void beforeTest(Context context, JSONObject suitInfo) {
-        try {
-            InstrumentImpl.getInstance().pressKeyCode(KeyEvent.KEYCODE_HOME);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
         ReportHandler.createRemoteSuitResult(context, suitInfo);
         SystemClock.sleep(2000);
     }

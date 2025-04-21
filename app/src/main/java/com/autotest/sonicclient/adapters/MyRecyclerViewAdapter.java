@@ -10,7 +10,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.List;
 
-public class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
+public class MyRecyclerViewAdapter extends RecyclerView.Adapter<MyRecyclerViewAdapter.MyViewHolder> {
 
     private List<String> dataList;
     private OnItemClickListener onItemClickListener;
@@ -20,7 +20,7 @@ public class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
         void onItemClick(int position);
     }
 
-    public MyAdapter(List<String> dataList, OnItemClickListener onItemClickListener) {
+    public MyRecyclerViewAdapter(List<String> dataList, OnItemClickListener onItemClickListener) {
         this.dataList = dataList;
         this.onItemClickListener = onItemClickListener;
     }

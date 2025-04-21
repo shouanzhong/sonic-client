@@ -31,7 +31,7 @@ public class JsonParser {
             ) {
             String line;
             while ((line = bufferedReader.readLine()) != null) {
-                Log.i(TAG, "readJsonFromAssets: " + line);
+                LogUtil.i(TAG, "readJsonFromAssets: " + line);
                 stringBuilder.append(line);
             }
         } catch (IOException e) {
@@ -51,11 +51,11 @@ public class JsonParser {
                 caseInfo.put(Constant.KEY_CASE_INFO_RID, suitInfo.getInteger(Constant.KEY_CASE_INFO_RID));
                 caseInfo.put(Constant.KEY_CASE_INFO_DEVICE_ID, suitInfo.getInteger(Constant.KEY_CASE_INFO_DEVICE_ID));
                 listener.handle(caseInfo);
-//                Log.i(TAG, "parseTestSuit: caseInfo: " + caseInfo);
+//                LogUtil.i(TAG, "parseTestSuit: caseInfo: " + caseInfo);
 //                JSONObject caseStepVo = caseInfo.getJSONObject("caseStepVo");
 //                List<JSONObject> steps = parseStep(caseInfo);
 //                for (JSONObject step : steps) {
-//                    Log.i(TAG, "parseTestSuit: step: " + step);
+//                    LogUtil.i(TAG, "parseTestSuit: step: " + step);
 //                }
             }
         } else {
@@ -67,10 +67,10 @@ public class JsonParser {
                 caseInfo.put(Constant.KEY_CASE_INFO_RID, suitInfo.getInteger(Constant.KEY_CASE_INFO_RID));
                 caseInfo.put(Constant.KEY_CASE_INFO_DEVICE_ID, suitInfo.getInteger(Constant.KEY_CASE_INFO_DEVICE_ID));
                 listener.handle(caseInfo);
-//                Log.i(TAG, "parseTestSuit: caseInfo: " + caseInfo);
+//                LogUtil.i(TAG, "parseTestSuit: caseInfo: " + caseInfo);
 //                List<JSONObject> steps = parseStep(caseInfo);
 //                for (JSONObject step : steps) {
-//                    Log.i(TAG, "parseTestSuit: step: " + step);
+//                    LogUtil.i(TAG, "parseTestSuit: step: " + step);
 //                }
 //                break; // debug 调试用
             }

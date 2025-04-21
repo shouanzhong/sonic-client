@@ -18,6 +18,7 @@
 package com.autotest.sonicclient.handler;
 
 import android.content.Context;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -39,7 +40,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @HandlerService
 public class StepHandlerWrapper extends StepHandlerBase {
     private static final String TAG = "StepHandlerWrapper";
-
+    private boolean recordStop = false;
     private final ConcurrentHashMap<ConditionEnum, IStepHandler> stepHandlersMap =
             new ConcurrentHashMap<>(8);
 
@@ -49,7 +50,9 @@ public class StepHandlerWrapper extends StepHandlerBase {
 
     public ResultInfo runStep(JSONObject stepJSON, ResultInfo resultInfo) throws Throwable {
         resultInfo.clearStep();
-        if (isStopped()) {
+
+        if (isStopped() && !recordStop) {
+            recordStop = true;
             return stopStep(resultInfo);
         }
         JSONObject step = stepJSON.getJSONObject(Constant.KEY_STEP_INFO_STEP);
@@ -61,13 +64,14 @@ public class StepHandlerWrapper extends StepHandlerBase {
         Integer conditionType = step.getInteger(Constant.KEY_STEP_INFO_CONDITION_TYPE);
         getSupportedCondition(SonicEnum.valueToEnum(ConditionEnum.class, conditionType))
                 .runStep(stepJSON, resultInfo);
+        resultInfo.collect();
         return resultInfo;
     }
 
     @NonNull
     private ResultInfo stopStep(ResultInfo resultInfo) {
-        resultInfo.setDetail("App用例执行被停止");
-        resultInfo.setError(true);
+        resultInfo.setStepDes("#### App用例执行被手动停止 ####");
+        resultInfo.packError();
         resultInfo.collect();
         return resultInfo;
     }

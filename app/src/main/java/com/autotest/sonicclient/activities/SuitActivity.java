@@ -13,9 +13,10 @@ import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.autotest.sonicclient.R;
 import com.autotest.sonicclient.adapters.SuitExpandableListAdapter;
+import com.autotest.sonicclient.services.AdbService;
 import com.autotest.sonicclient.services.RunServiceHelper;
 import com.autotest.sonicclient.utils.Constant;
-import com.autotest.sonicclient.utils.HttpUtil;
+import com.autotest.sonicclient.utils.http.HttpUtil;
 import com.autotest.sonicclient.utils.LogUtil;
 import com.autotest.sonicclient.utils.ToastUtil;
 
@@ -46,6 +47,19 @@ public class SuitActivity extends BaseActivity {
 //            redirectLogin();
             projectID = "1";  // debug
         }
+
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Intent intent = new Intent();
+                intent.setClass(SuitActivity.this, AdbService.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startService(intent);
+            }
+        });
+
+
+
         LogUtil.d(TAG, "onCreate: projectID = " + projectID);
         getSupportActionBar().setTitle(String.format("TestSuits-[%s]", Build.BOARD));
         //
@@ -64,6 +78,7 @@ public class SuitActivity extends BaseActivity {
                     return ;
                 }
                 String sid = mapNameAndId.get(projectName);
+                ToastUtil.showToast(SuitActivity.this, "拉取远端数据");
                 HttpUtil.get(String.format(Constant.URL_SERVER_TESTCASE_LIST, sid), new HttpUtil.Callback<JSONArray>() {
                     @Override
                     public void onResponse(Call call, JSONArray cases) throws IOException {
@@ -96,6 +111,11 @@ public class SuitActivity extends BaseActivity {
         // 运行
         Button btnShowChecked = findViewById(R.id.btnRun);
         btnShowChecked.setOnClickListener(v -> {
+            if (!RunServiceHelper.waitServiceReady()) {
+                ToastUtil.showToast(SuitActivity.this, "服务连接失败");
+                return;
+            }
+
             if (RunServiceHelper.isServiceRunning()) {
                 ToastUtil.showToast(SuitActivity.this, "用例执行中, 请先停止");
                 return;

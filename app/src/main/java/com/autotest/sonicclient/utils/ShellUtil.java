@@ -24,14 +24,14 @@ public class ShellUtil {
         execCmd(cmd, new OnStreamChangedListener() {
             @Override
             public void onStreamChanged(String line) {
-                Log.d(TAG, "onStreamChanged: " + line);
+                LogUtil.d(TAG, "onStreamChanged: " + line);
                 sb.append(line);
                 sb.append("\n");
             }
 
             @Override
             public void onErrorStreamChanged(String line) {
-                Log.e(TAG, "onErrorStreamChanged: " + line);
+                LogUtil.e(TAG, "onErrorStreamChanged: " + line);
                 err.append(line);
                 err.append("\n");
             }
@@ -106,7 +106,7 @@ public class ShellUtil {
                     }
                 }
             } catch (IOException e) {
-                Log.e(TAG, String.format("execCmd: IOException raise when execute command [%s]", this.cmd), e);
+                LogUtil.e(TAG, String.format("execCmd: IOException raise when execute command [%s]", this.cmd), e);
             }
             finally {
                 if (process != null && process.isAlive()) {

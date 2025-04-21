@@ -8,14 +8,14 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.autotest.sonicclient.R;
-import com.autotest.sonicclient.adapters.MyAdapter;
+import com.autotest.sonicclient.adapters.MyRecyclerViewAdapter;
 import com.autotest.sonicclient.utils.Constant;
-import com.autotest.sonicclient.utils.HttpUtil;
+import com.autotest.sonicclient.utils.http.HttpUtil;
+import com.autotest.sonicclient.utils.LogUtil;
 import com.autotest.sonicclient.utils.ToastUtil;
 
 import java.io.IOException;
@@ -30,7 +30,7 @@ public class ProjectActivity extends BaseActivity {
     private static final String TAG = "ProjectActivity";
 
     private RecyclerView recyclerView;
-    private MyAdapter adapter;
+    private MyRecyclerViewAdapter adapter;
     private List<String> dataList;
     private HashMap<String, String> mapNameAndId= new HashMap();
 
@@ -52,7 +52,7 @@ public class ProjectActivity extends BaseActivity {
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
         // 初始化适配器
-        adapter = new MyAdapter(dataList, position -> {
+        adapter = new MyRecyclerViewAdapter(dataList, position -> {
             // 点击事件处理
             String item = dataList.get(position);
             ToastUtil.showToast("进入项目: " + item);
@@ -74,7 +74,7 @@ public class ProjectActivity extends BaseActivity {
         HttpUtil.get(Constant.URL_SERVER_PROJECT_LIST, new HttpUtil.Callback<JSONArray>() {
             @Override
             public void onResponse(Call call, JSONArray item) throws IOException {
-                Log.i(TAG, "onResponse: " + item);
+                LogUtil.i(TAG, "onResponse: " + item);
                 for (Object o : item) {
                     JSONObject jsonObject = (JSONObject) o;
                     String id = jsonObject.getString("id");
@@ -82,7 +82,7 @@ public class ProjectActivity extends BaseActivity {
 //                    String format = String.format("%s  %s", id, projectName);
                     dataList.add(projectName);
                     mapNameAndId.put(projectName, id);
-                    Log.i(TAG, String.format("onResponse: O = %s, type = %s", o, o.getClass()));
+                    LogUtil.i(TAG, String.format("onResponse: O = %s, type = %s", o, o.getClass()));
                 }
                 runOnUiThread(() -> {
                     adapter.notifyDataSetChanged();
@@ -92,7 +92,7 @@ public class ProjectActivity extends BaseActivity {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 super.onFailure(call, e);
-                Log.i(TAG, "onFailure: Constant.URL_SERVER_PROJECT_LIST = " + Constant.URL_SERVER_PROJECT_LIST);
+                LogUtil.i(TAG, "onFailure: Constant.URL_SERVER_PROJECT_LIST = " + Constant.URL_SERVER_PROJECT_LIST);
 //                ToastUtil.showToast(ProjectActivity.this, "访问服务器失败");
             }
         });

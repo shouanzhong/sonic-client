@@ -37,7 +37,6 @@ public class AdbServiceWrapper {
 
     public AdbServiceWrapper(Context context) {
         this.context = context;
-//        connect();
     }
 
     void connect() {
@@ -85,8 +84,8 @@ public class AdbServiceWrapper {
         return crypto;
     }
 
-    public void execCmd(String cmd, ShellUtil.OnStreamChangedListener listener , int timeout) {
-        Log.i(TAG, "execCmd: " + cmd);
+    public void execCmd(String cmd, ShellUtil.OnStreamChangedListener listener, int timeout) {
+        LogUtil.d(TAG, "execCmd: " + cmd);
         StringBuilder sb = new StringBuilder();
         MExecutor.execute(() -> {
             try {
@@ -96,12 +95,12 @@ public class AdbServiceWrapper {
                 Queue<byte[]> results = stream.getReadQueue();
                 for (byte[] bytes : results) {
                     if (bytes != null) {
-                        listener.onErrorStreamChanged(new String(bytes));
+                        listener.onStreamChanged(new String(bytes));
                         sb.append(new String(bytes));
                     }
                 }
                 String string = sb.toString();
-                LogUtil.i(TAG, "execCmd: " + string);
+//                LogUtil.d(TAG, "execCmd: " + string);
             } catch (IOException e) {
                 e.printStackTrace();
             } catch (InterruptedException e) {
@@ -126,12 +125,16 @@ public class AdbServiceWrapper {
         return sb.toString();
     }
 
+    public void execCmd(String cmd, ShellUtil.OnStreamChangedListener listener) {
+        execCmd(cmd, listener, -1);
+    }
+
     public String execCmd(String cmd) {
-        return execCmd(cmd, 5000);
+        return execCmd(cmd, -1);
     }
 
     void wait(AdbStream stream, int timeout) throws IOException {
-        if (timeout == 0) {
+        if (timeout == -1) {
             while (!stream.isClosed()) {
                 SystemClock.sleep(10);
             }
@@ -148,17 +151,7 @@ public class AdbServiceWrapper {
     }
 
     public boolean isConnected() {
-//        return connection != null && connection.isFine();
         return adbService != null && adbService.getConnection() != null && adbService.getConnection().isFine();
     }
 
-//    public void close() {
-//        if (isConnected()) {
-//            try {
-//                connection.close();
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-//        }
-//    }
 }

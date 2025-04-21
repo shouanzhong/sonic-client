@@ -3,6 +3,7 @@ package com.autotest.sonicclient.services;
 import android.util.Log;
 
 import com.autotest.sonicclient.interfaces.Assemble;
+import com.autotest.sonicclient.utils.LogUtil;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -23,18 +24,18 @@ public class InjectorService {
         if (update) {
             ArrayList<?> services = getServices(Object.class);
             for (Object service : services) {
-                Log.d(TAG, "register: update class : " + service.getClass());
+                LogUtil.d(TAG, "register: update class : " + service.getClass());
                 for (Field field : service.getClass().getDeclaredFields()) {
                     if (field.isAnnotationPresent(Assemble.class)) {
                         field.setAccessible(true);
                         Class<?> type = field.getType();
-                        Log.d(TAG, String.format("register: update type = %s, fileClass = %s", type, object.getClass()));
+                        LogUtil.d(TAG, String.format("register: update type = %s, fileClass = %s", type, object.getClass()));
                         if (!type.isAssignableFrom(object.getClass())) {
                             continue;
                         }
 
                         field.set(service, object);
-                        Log.d(TAG, String.format("update: class: %s, field: %s", service.getClass().getName(), field.getName()));
+                        LogUtil.d(TAG, String.format("update: class: %s, field: %s", service.getClass().getName(), field.getName()));
                     }
                 }
             }

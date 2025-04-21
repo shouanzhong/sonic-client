@@ -1,16 +1,15 @@
 package com.autotest.sonicclient;
 
-import androidx.annotation.NonNull;
+import android.view.KeyEvent;
 
-import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.autotest.sonicclient.services.DeviceService;
+import com.autotest.sonicclient.services.InjectorService;
 import com.autotest.sonicclient.utils.Assert;
-import com.autotest.sonicclient.utils.HttpUtil;
 import com.autotest.sonicclient.utils.MinioUtil;
 
 import org.codehaus.groovy.control.CompilerConfiguration;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -35,12 +34,8 @@ import io.minio.errors.InvalidResponseException;
 import io.minio.errors.MinioException;
 import io.minio.errors.ServerException;
 import io.minio.errors.XmlParserException;
-import io.minio.messages.CsvOutputSerialization;
-import okhttp3.Call;
-import okhttp3.Callback;
 import okhttp3.MediaType;
 import okhttp3.RequestBody;
-import okhttp3.Response;
 
 
 /**
@@ -270,14 +265,67 @@ public class ExampleUnitTest {
     @Test
     public void test_Groovy() {
         String a = "test var = a";
-        String script = "return a";
+        String script = "a.print(\"测试\")";
         Binding binding = new Binding();
-        binding.setVariable("a", a); // 绑定变量 a
+        binding.setVariable("a", new A()); // 绑定变量 a
         CompilerConfiguration config = new CompilerConfiguration();
         GroovyShell shell = new GroovyShell(binding, config);
         Object evaluate = shell.evaluate(script);
         System.out.println("测试结果: ");
         System.out.println(evaluate);
+    }
+
+    @Test
+    public  void test_transformGroovyScript() {
+        String lines = "import com.tinno.athena.agent.bridge.android.AndroidDeviceBridgeTool;\n" +
+                "import com.tinno.athena.agent.tests.LogUtil;\n" +
+                "import com.tinno.athena.agent.common.interfaces.StepType;\n" +
+                "import com.android.ddmlib.IShellOutputReceiver;\n" +
+                "import java.util.concurrent.TimeUnit;\n" +
+                "import static org.testng.Assert.*;\n" +
+                "def photoNumIsOne(){\n" +
+                "        LogUtil log = androidStepHandler.log\n" +
+                "        String files = AndroidDeviceBridgeTool.executeCommand(androidStepHandler.iDevice,\"ls -l /storage/emulated/0/DCIM/Camera/\")\n" +
+                "        log.sendStepLog(StepType.INFO,\"file name\",files)\n" +
+                "        String out = AndroidDeviceBridgeTool.executeCommand(androidStepHandler.iDevice,\"ls -l /storage/emulated/0/DCIM/Camera/ | grep ^- |wc -l\")\n" +
+                "        log.sendStepLog(StepType.INFO,\"Get photo num\",out)\n" +
+                "        Integer num=Integer.parseInt(out.trim())\n" +
+                "        assertEquals(num,1)\n" +
+                "}\n" +
+                "photoNumIsOne()";
+
+//        DeviceService deviceService = InjectorService.getService(DeviceService.class);
+//        assert deviceService != null;
+
+        StringBuilder stringBuilder = new StringBuilder("import com.autotest.sonicclient.utils.Assert.*;\n");
+
+        Pattern cmdCompile = Pattern.compile("executeCommand\\(.*?,\"([^\"]+)\"\\)");
+
+
+
+        // 遍历字符串数组
+        for (String line : lines.split("\n")) {
+            // 检查当前行是否包含特定的子字符串
+            if (!line.contains("import") && !line.contains("log.sendStepLog") && !line.contains("androidStepHandler.log")) {
+                // 如果不包含，则添加到StringBuilder中
+//                if (line.contains("AndroidDeviceBridgeTool.executeCommand(androidStepHandler.iDevice,")) {
+//                    line = line.replace("AndroidDeviceBridgeTool.executeCommand(androidStepHandler.iDevice,",
+//                            "deviceService.execCmd(");
+//                }
+//                stringBuilder.append(line).append(System.lineSeparator());
+                Matcher matcher = cmdCompile.matcher(line);
+                if (matcher.find()) {
+                    String group = matcher.group(1);
+                    System.out.println("matcher: " + group);
+                }
+            }
+        }
+
+    }
+
+    @Test
+    public void test_pressKey() {
+        InjectorService.getService(DeviceService.class).pressKeyCode(KeyEvent.KEYCODE_POWER);
     }
 
     class A {

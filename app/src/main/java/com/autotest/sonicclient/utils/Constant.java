@@ -1,6 +1,7 @@
 package com.autotest.sonicclient.utils;
 
 import android.os.Build;
+import android.os.Environment;
 
 import com.autotest.sonicclient.config.GConfig;
 
@@ -10,12 +11,12 @@ public class Constant {
     public static final CharSequence APP_NAME = "Sonic Client";
     static public String URL_SERVER_LOGIN = GConfig.URL_SERVER_BASE + "/api/controller/viewCase/login";
     static public String URL_SERVER_PROJECT_LIST = GConfig.URL_SERVER_BASE + "/api/controller/projects/list";
-//    static public String URL_SERVER_TESTSUITE_LIST = GConfig.URL_SERVER_BASE + "/api/controller/testSuites/list?projectId=%s&name=&page=1&pageSize=25";
     static public String URL_SERVER_TESTSUITE_LIST = GConfig.URL_SERVER_BASE + "/api/controller/testSuites/custom-list?model=" + Build.MODEL + "&board=" + Build.BOARD;
-//    static public String URL_SERVER_TESTCASE_LIST = GConfig.URL_SERVER_BASE + "/api/controller/testSuites/getSuit?id=%s";
     static public String URL_SERVER_TESTCASE_LIST = GConfig.URL_SERVER_BASE + "/api/controller/testSuites/list-steps?suiteId=%s";
     static public final String URL_SERVER_TESTSUITE_RESULT_CREATE = GConfig.URL_SERVER_BASE + "/api/controller/viewCase/createJob";
     static public final String URL_SERVER_STEP_RESULT = GConfig.URL_SERVER_BASE + "/api/controller/viewCase/accept-step-log";
+
+    static public final String BASE_DIR = String.format("/storage/emulated/0/sonic/");
 //
     public static final String ACTION_ACC_PERMISSION = "com.autotest.sonicclient.ACTION_ACC_PERMISSION";
 

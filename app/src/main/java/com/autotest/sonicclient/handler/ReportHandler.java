@@ -2,19 +2,20 @@ package com.autotest.sonicclient.handler;
 
 import android.content.Context;
 import android.os.Build;
-import android.util.Log;
 
 import androidx.annotation.NonNull;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.autotest.sonicclient.application.ApplicationImpl;
+import com.autotest.sonicclient.config.GConfig;
 import com.autotest.sonicclient.enums.StepType;
 import com.autotest.sonicclient.model.CaseResult;
 import com.autotest.sonicclient.model.StepResult;
 import com.autotest.sonicclient.model.SuitResult;
+import com.autotest.sonicclient.threads.MExecutor;
 import com.autotest.sonicclient.utils.Constant;
-import com.autotest.sonicclient.utils.HttpUtil;
+import com.autotest.sonicclient.utils.http.HttpUtil;
 import com.autotest.sonicclient.utils.LogUtil;
 import com.autotest.sonicclient.utils.MinioUtil;
 import com.autotest.sonicclient.utils.ShellUtil;
@@ -33,7 +34,6 @@ public class ReportHandler {
     private static final String TAG = "ReportHandler";
     public static String REPORT_URL = "";
     public static String LOG_FILE_URL = "";
-    static JSONObject postBody;
     private static boolean DEBUG = false;
 
     public static void createRemoteSuitResult(Context context, JSONObject suitInfo) {
@@ -42,7 +42,7 @@ public class ReportHandler {
         }
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("suiteId", suitInfo.getInteger(Constant.KEY_SUIT_INFO_SID));
-        jsonObject.put("udid", Build.getSerial());
+        jsonObject.put("udid", "unknown");  // Build.getSerial()
         jsonObject.put("deviceName", Build.PRODUCT);
         jsonObject.put("model", Build.MODEL);
         jsonObject.put("board", Build.BOARD);
@@ -75,7 +75,7 @@ public class ReportHandler {
     }
 
     public static void send(SuitResult suitResult) {
-        Log.d(TAG, "send: suitResult: " + suitResult);
+        LogUtil.d(TAG, "send: suitResult: " + suitResult);
         sendLog(suitResult);
         sendSuitResult(REPORT_URL, suitResult);
     }
@@ -107,7 +107,7 @@ public class ReportHandler {
                 file.delete();
             } catch (Exception e) {
                 e.printStackTrace();
-                Log.e(TAG, "sendLog: fail: " + file, e);
+                LogUtil.e(TAG, "sendLog: fail: " + file, e);
             }
         }
     }
@@ -124,61 +124,99 @@ public class ReportHandler {
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                // TODO:
+                response.close();
             }
         });
+    }
+
+    public static void sendCaseResult(Context context, CaseResult caseResult) {
+        if (DEBUG) {
+            return;
+        }
+        JSONObject bodyJson = new JSONObject();
+        for (StepResult step : caseResult.getSteps().toJavaList(StepResult.class)) {
+            bodyJson.put("caseId", caseResult.getCid());
+            bodyJson.put("desc", step.getDes());
+            bodyJson.put("deviceId", caseResult.getDeviceId());
+            bodyJson.put("log", step.getLog());
+            bodyJson.put("resultId", step.getRid());
+            bodyJson.put("status", step.getStatus());
+            bodyJson.put("type", "step");
+            break;
+        }
+        bodyJson.put("desc", "用例结束");
+        bodyJson.put("log", "");
+        bodyJson.put("type", "status");
+        bodyJson.put("status", caseResult.isPass() ? StepType.PASS : StepType.ERROR);
+        LogUtil.d(TAG, "sendFinish: json: " + bodyJson);
+//        try {
+//            String s = HttpUtil.postSync(Constant.URL_SERVER_STEP_RESULT, bodyJson.toString());
+//        } catch (IOException e) {
+//            LogUtil.d(TAG, String.format("upload case info fail: [%s]", bodyJson), e);
+//        }
+        HttpUtil.post(Constant.URL_SERVER_STEP_RESULT, bodyJson.toString(), new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                LogUtil.e(TAG, "sendCaseResult: 请求发送失败 ", e);
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                response.close();
+            }
+        });
+//        MExecutor.getGExecutor().submit(new Runnable() {
+//            @Override
+//            public void run() {
+////                sendCaseResult(context, caseResult);
+//                try {
+//                    String s = HttpUtil.postSync(Constant.URL_SERVER_STEP_RESULT, bodyJson.toString());
+//                    Log.d(TAG, "sendCaseResult: " + s);
+//                } catch (IOException e) {
+//                    LogUtil.d(TAG, String.format("upload case info fail: [%s]", bodyJson), e);
+//                }
+//            }
+//        });
+
+        // 写入文件
+        FileUtil.writeString(caseResult.toJSONString(), String.format("%s/results/Json/%s/%s_%s.log",
+                        GConfig.DATA_BASE_DIR,
+                        caseResult.getCaseName(), caseResult.getCaseName(), System.currentTimeMillis()),
+                StandardCharsets.UTF_8);
     }
 
     public static void sendStepsResult(Context context, CaseResult caseResult) {
         if (DEBUG) {
             return;
         }
-        boolean haveError = false;
         for (StepResult step : caseResult.getSteps().toJavaList(StepResult.class)) {
-            haveError = haveError || step.getStatus() != StepType.PASS;
-            postBody = new JSONObject();
-            postBody.put("caseId", caseResult.getCid());
-            postBody.put("desc", step.getDes());
-            postBody.put("deviceId", caseResult.getDeviceId());
-            postBody.put("log", step.getLog());
-            postBody.put("resultId", step.getRid());
-            postBody.put("status", step.getStatus());
-            postBody.put("type", "step");
-            LogUtil.d(TAG, "sendCaseResult: json: " + postBody);
-            HttpUtil.post(Constant.URL_SERVER_STEP_RESULT, postBody.toString(), new Callback() {
-                @Override
-                public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                    ToastUtil.showToast(context, "上传步骤执行结果失败");
-                }
-
-                @Override
-                public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                    Log.d(TAG, "onResponse: sendCaseResult: " + response.body().string());
+            JSONObject bodyJson = step.jsonForReport();
+            LogUtil.d(TAG, "sendStepsResult: json: " + bodyJson);
+            MExecutor.getGExecutor().submit(() -> {
+                try {
+                    String s = HttpUtil.postSync(Constant.URL_SERVER_STEP_RESULT, bodyJson.toString());
+                    LogUtil.d(TAG, "sendStepsResult: " + s);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    LogUtil.d(TAG, String.format("upload step log fail: [%s]", bodyJson), e);
                 }
             });
-            FileUtil.writeString(caseResult.toJSONString(), String.format("/sdcard/sonic/%s/%s_%s.log",
-                    caseResult.getCaseName(), caseResult.getCaseName(), System.currentTimeMillis()),
-                    StandardCharsets.UTF_8);
         }
-        sendCaseResult(context, haveError);
     }
 
-    public static void sendCaseResult(Context context, boolean isError) {
-        if (DEBUG) {
-            return;
-        }
-        postBody.put("type", "status");
-        postBody.put("status", isError ? StepType.ERROR : StepType.PASS);
-        LogUtil.d(TAG, "sendFinish: json: " + postBody);
-        HttpUtil.post(Constant.URL_SERVER_STEP_RESULT, postBody.toString(), new Callback() {
+//    public static void sendStepResult(Context context, StepResult stepResult) {
+    public static void sendStepResult(StepResult stepResult) {
+        JSONObject bodyJson = stepResult.jsonForReport();
+        LogUtil.d(TAG, "sendStepResult: json: " + bodyJson);
+        HttpUtil.post(Constant.URL_SERVER_STEP_RESULT, bodyJson.toString(), new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                ToastUtil.showToast(context, "发送结束信号失败", true);
+                LogUtil.e(TAG, "sendStepsResult: 请求发送失败 ", e);
             }
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                Log.d(TAG, "onResponse: sendFinish: " + response.body().string());
+                response.close();
             }
         });
     }

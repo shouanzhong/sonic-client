@@ -23,11 +23,22 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
     }
 
+    applicationVariants.all { variant ->
+        variant.outputs.all {
+            def projectName = rootProject.name.trim()
+            def buildType = variant.buildType.name
+//            def versionName = variant.versionName
+//            def versionCode = variant.versionCode
+            def date = new Date().format('yyyyMMdd-HHmm')
 
+//            outputFileName = "${projectName}-v${versionName}(${versionCode})-${buildType}-${date}.apk"
+            outputFileName = "${projectName}-${buildType}-${date}.apk"
+        }
+    }
 //    signingConfigs {
 //        release {
 //            storeFile file("../signer/system.jks")
@@ -47,6 +58,23 @@ android {
 
 }
 
+task MyAssembleDebugAndTest(type: Test) {
+    // 使用 JUnit 4
+    useJUnit()
+
+    // 依赖于 assembleDebug 和 assembleDebugAndroidTest 任务
+    dependsOn ':app:assembleDebug', ':app:assembleDebugAndroidTest'
+
+    // 设置 testClassesDirs 和 classpath
+    testClassesDirs = files('build/intermediates/javac/debug/classes', 'build/tmp/kotlin-classes/debug')
+    classpath = files('build/intermediates/javac/debug/classes', 'build/tmp/kotlin-classes/debug', 'build/intermediates/javac/debugAndroidTest/classes', 'build/tmp/kotlin-classes/debugAndroidTest')
+
+    // 指定测试类和方法
+    filter {
+        includeTestsMatching "com.autotest.sonicclient.UITest#test_pressKey" // 替换为你的完整类名
+    }
+}
+
 dependencies {
 
     implementation 'androidx.appcompat:appcompat:1.4.1'
@@ -59,12 +87,27 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
     androidTestImplementation "androidx.test.uiautomator:uiautomator:2.2.0"
     implementation 'com.alibaba:fastjson:2.0.28'
-    implementation 'com.squareup.okhttp3:okhttp:4.10.0'
+    implementation 'com.squareup.okhttp3:okhttp:4.9.3'
     implementation ('com.orhanobut:logger:2.2.0') {
         exclude group: "com.android.support"
     }
     implementation("io.minio:minio:8.5.8")
     implementation 'cn.hutool:hutool-all:5.8.35'
-//    implementation 'org.codehaus.groovy:groovy-all:3.0.9'
-    implementation 'org.codehaus.groovy:groovy:3.0.20'
+//    implementation 'org.codehaus.groovy:groovy:3.0.9'
+//    implementation 'org.codehaus.groovy:groovy-android:3.0.7'
+//    implementation 'org.codehaus.groovy:groovy-android:3.0.9'
+//    implementation 'com.github.saurik:groovy:2.4.7'
+//    implementation 'org.codehaus.groovy:groovy:2.5.14'          // Groovy 核心
+//    implementation 'org.codehaus.groovy:groovy-android:2.5.14'  // Android 适配
+//    implementation 'io.github.dingyi222666:groovy-android:1.0.7-beta4'
+//    implementation 'io.github.dingyi222666:groovy-android:1.0.6'
+//    implementation 'org.codehaus.groovy:groovy:2.4.21:grooid'
+    implementation 'org.codehaus.groovy:groovy:2.4.15:grooid'
+
+//    implementation 'org.bytedeco:opencv:4.5.5-1.5.7'
+//    implementation 'org.opencv:opencv-android:4.5.3'
+//    implementation 'org.opencv:opencv:4.9.0'
+    implementation project(':opencvlib')
+
+
 }

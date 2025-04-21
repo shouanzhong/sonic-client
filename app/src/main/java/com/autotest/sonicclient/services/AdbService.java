@@ -50,7 +50,7 @@ public class AdbService extends Service {
                     connection = AdbConnection.create(address, crypto);
                     connection.connect();
                 } catch (Exception e) {
-                    Log.e(TAG, "Connect fail...");
+                    LogUtil.w(TAG, "Connect fail...");
                 }
             }
         });
@@ -124,9 +124,10 @@ public class AdbService extends Service {
                     }
 
                     //
-                    Intent broadcastIntent = new Intent();
-                    broadcastIntent.setAction(Constant.ACTION_ACC_PERMISSION);
-                    sendBroadcast(broadcastIntent);
+                    Intent intent1 = new Intent();
+                    intent1.setAction(Constant.ACTION_ACC_PERMISSION);
+                    intent1.setPackage(getPackageName());
+                    sendBroadcast(intent1);
                 }
 
                 SystemClock.sleep(1000);

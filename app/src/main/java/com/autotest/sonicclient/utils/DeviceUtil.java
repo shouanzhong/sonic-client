@@ -17,8 +17,12 @@ import android.view.Display;
 import android.view.Surface;
 import android.view.WindowManager;
 
+import com.autotest.sonicclient.config.GConfig;
 import com.autotest.sonicclient.receivers.InstallReceiver;
 import com.autotest.sonicclient.receivers.UninstallReceiver;
+import com.autotest.sonicclient.services.AdbService;
+import com.autotest.sonicclient.services.AdbServiceWrapper;
+import com.autotest.sonicclient.services.InjectorService;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -58,12 +62,12 @@ public class DeviceUtil {
     }
 
     public static String takeShot(String name) {
-        @SuppressLint("SdCardPath") String dir = "/sdcard/sonic/screenshot";
+        @SuppressLint("SdCardPath") String dir = GConfig.DATA_BASE_DIR + "screenshot";
         FileUtil.createDirs(dir);
         long timeMillis = System.currentTimeMillis();
         String filePath = String.format("%s/%s_%s.png", dir, name, timeMillis);
         String cmd = String.format("screencap -p %s", filePath);
-        ShellUtil.execCmd(cmd);
+        InjectorService.getService(AdbServiceWrapper.class).execCmd(cmd);
         return filePath;
     }
 
@@ -163,7 +167,7 @@ public class DeviceUtil {
             Settings.System.putInt(resolver, Settings.System.ACCELEROMETER_ROTATION, 0);
         }
 
-        // 右旋转（顺时针旋转90度）
+        // 右旋转
         public static void setRight(Context context) {
             ContentResolver resolver = context.getContentResolver();
             Settings.System.putInt(resolver, Settings.System.USER_ROTATION, 1);
